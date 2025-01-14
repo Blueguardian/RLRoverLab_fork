@@ -1,10 +1,14 @@
-
 from gymnasium.spaces.box import Box
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 
-from rover_envs.envs.navigation.learning.skrl.models import (Critic, DeterministicActor, DeterministicNeuralNetwork,
-                                                             DeterministicNeuralNetworkConv, GaussianNeuralNetwork,
-                                                             GaussianNeuralNetworkConv)
+from rover_envs.envs.navigation.learning.skrl.models import (
+    Critic,
+    DeterministicActor,
+    DeterministicNeuralNetwork,
+    DeterministicNeuralNetworkConv,
+    GaussianNeuralNetwork,
+    GaussianNeuralNetworkConv,
+)
 
 
 def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False):
@@ -70,7 +74,7 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
 
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
 
     mlp_input_size = 5
 
@@ -101,7 +105,7 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
 
 def get_model_double_critic_deterministic(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
 
     mlp_input_size = 4
 
