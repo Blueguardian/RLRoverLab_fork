@@ -28,7 +28,7 @@ To get started with RLRoverLab, please refer to our [Installation Guide](https:/
 <!--## Contribution
 
 We welcome contributions to RLRoverLab! Whether it's adding new tasks, or fixing bugs. Check out our [Contribution Guidelines](https://github.com/abmoRobotics/isaac_rover_orbit/CONTRIBUTING.md) for more information on how to get involved. -->
-## Train agents in parralel
+## Train agents in parallel
 
 https://github.com/abmoRobotics/isaac_rover_orbit/assets/56405924/71b69616-0a69-46c6-b3ce-009554bfa3c4
 
