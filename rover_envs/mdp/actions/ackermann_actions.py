@@ -274,4 +274,3 @@ def ackermann(lin_vel, ang_vel, cfg, device):
     wheel_velocities = wheel_velocities / (wheel_radius*2)
 
     return steering_angles, wheel_velocities
-

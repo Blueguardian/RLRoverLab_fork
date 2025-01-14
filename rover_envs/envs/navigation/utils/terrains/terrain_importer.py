@@ -6,7 +6,6 @@ from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedEnv
 from omni.isaac.lab.managers import CommandTerm
 from omni.isaac.lab.markers import VisualizationMarkers
-
 # TODO (anton): Remove the following import since they were changed in the Orbit API
 # from omni.isaac.lab.envs.mdp.commands.commands_cfg import TerrainBasedPositionCommandCfg
 # from omni.isaac.lab.envs.mdp.commands.position_command import TerrainBasedPositionCommand

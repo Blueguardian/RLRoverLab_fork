@@ -128,16 +128,17 @@ def video_record(
 
 
 from omni.isaac.lab_tasks.utils import parse_env_cfg  # noqa: E402
+#     env.close()
+#     simulation_app.close()
+from skrl.trainers.torch import SequentialTrainer  # noqa: E402
 from skrl.utils import set_seed  # noqa: E402, F401
 
 import rover_envs.envs.navigation.robots  # noqa: E402, F401
-
 # Import agents
 from rover_envs.learning.train import get_agent  # noqa: E402
 from rover_envs.utils.config import parse_skrl_cfg  # noqa: E402
 from rover_envs.utils.skrl_utils import SkrlOrbitVecWrapper  # noqa: E402
 from rover_envs.utils.skrl_utils import SkrlSequentialLogTrainer  # noqa: E402
-
 
 # def train():
 #     args_cli_seed = args_cli.seed if args_cli.seed is not None else random.randint(0, 100000000)
@@ -168,9 +169,6 @@ from rover_envs.utils.skrl_utils import SkrlSequentialLogTrainer  # noqa: E402
 #     trainer = SkrlSequentialLogTrainer(cfg=trainer_cfg, agents=agent, env=env)
 #     trainer.train()
 
-#     env.close()
-#     simulation_app.close()
-from skrl.trainers.torch import SequentialTrainer  # noqa: E402
 
 
 def train():

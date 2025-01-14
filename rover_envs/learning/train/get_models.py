@@ -1,14 +1,9 @@
 from gymnasium.spaces.box import Box
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 
-from rover_envs.envs.navigation.learning.skrl.models import (
-    Critic,
-    DeterministicActor,
-    DeterministicNeuralNetwork,
-    DeterministicNeuralNetworkConv,
-    GaussianNeuralNetwork,
-    GaussianNeuralNetworkConv,
-)
+from rover_envs.envs.navigation.learning.skrl.models import (Critic, DeterministicActor, DeterministicNeuralNetwork,
+                                                             DeterministicNeuralNetworkConv, GaussianNeuralNetwork,
+                                                             GaussianNeuralNetworkConv)
 
 
 def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False):

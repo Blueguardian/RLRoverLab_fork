@@ -46,4 +46,3 @@ https://github.com/abmoRobotics/isaac_rover_orbit/assets/56405924/84a9f405-f537-
 If you have questions, suggestions, feel free to contact us.
 
 - **Contact Us**: For direct inquiries, reach out to Anton Bjørndahl Mortensen at [antonbm2008@gmail.com](mailto:antonbm2008@gmail.com).
-
