@@ -2,6 +2,7 @@ import argparse
 import math
 import os
 import random
+import sys
 from datetime import datetime
 
 import carb
@@ -10,26 +11,38 @@ from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
-parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")
+#parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
-parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
-args_cli = parser.parse_args()
+#args_cli = parser.parse_args()
 
 # launch the simulator
-config = {"headless": args_cli.headless}
+#config = {"headless": args_cli.headless}
 # load cheaper kit config in headless
-if args_cli.headless:
-    app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.gym.headless.kit"
-else:
-    app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.kit"
+# if args_cli.headless:
+#     app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.gym.headless.kit"
+# else:
+#     app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.kit"
 
-app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
+AppLauncher.add_app_launcher_args(parser)
+args_cli, hydra_args = parser.parse_known_args()
+
+# always enable cameras to record video
+if args_cli.video:
+    args_cli.enable_cameras = True
+
+# clear out sys.argv for Hydra
+sys.argv = [sys.argv[0]] + hydra_args
+
+#app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
+
+app_launcher = AppLauncher(args_cli)
+
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 simulation_app = app_launcher.app
 
@@ -164,7 +177,7 @@ def train():
 
     # Create the environment
     render_mode = "rgb_array" if args_cli.video else None
-    env = gym.make(args_cli.task, cfg=env_cfg, headless=args_cli.headless,
+    env = gym.make(args_cli.task, cfg=env_cfg,
                    viewport=args_cli.video, render_mode=render_mode)
     # Check if video recording is enabled
     env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
