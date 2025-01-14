@@ -6,6 +6,7 @@ from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedEnv
 from omni.isaac.lab.managers import CommandTerm
 from omni.isaac.lab.markers import VisualizationMarkers
+
 # TODO (anton): Remove the following import since they were changed in the Orbit API
 # from omni.isaac.lab.envs.mdp.commands.commands_cfg import TerrainBasedPositionCommandCfg
 # from omni.isaac.lab.envs.mdp.commands.position_command import TerrainBasedPositionCommand
@@ -153,7 +154,7 @@ class RoverTerrainImporter(TerrainImporter):
 
         # Sample new targets
         reset_buf_len = len(env_ids)
-        while (reset_buf_len > 0):
+        while reset_buf_len > 0:
             # sample new random targets
             # print(reset_buf_len)
             # print(f'env_ids: {env_ids}')
@@ -161,11 +162,13 @@ class RoverTerrainImporter(TerrainImporter):
 
             # Here we check if the target is valid, and if not, we resample a new random target
             env_ids, reset_buf_len = self._terrainManager.check_if_target_is_valid(
-                env_ids, target_position[env_ids, 0:2], device=self.device)
+                env_ids, target_position[env_ids, 0:2], device=self.device
+            )
 
         # Adjust the height of the target, so that it matches the terrain
         target_position[original_env_ids, 2] = self._terrainManager._heightmap_manager.get_height_at(
-            target_position[original_env_ids, 0:2])
+            target_position[original_env_ids, 0:2]
+        )
 
         return target_position[original_env_ids]
 
