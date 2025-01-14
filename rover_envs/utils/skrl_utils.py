@@ -43,7 +43,7 @@ def SkrlVecEnvWrapper(env: ManagerBasedRLEnv):
 
 
 class SkrlOrbitVecWrapper(IsaacLabWrapper):
-    """Wrapper for the Isaac Orbit environment.
+    """ Wrapper for the Isaac Orbit environment.
     Note: The wrapper from SKRL breaks with nan values of in the observation space.
     This can sometimes happen within a ORBIT environment. This wrapper is used to handle the nan values.
     """
@@ -57,13 +57,7 @@ class SkrlOrbitVecWrapper(IsaacLabWrapper):
 
         self._observations, reward, terminated, truncated, self._info = self._env.step(actions)
         self._obs_dict["policy"] = torch.nan_to_num(self._obs_dict["policy"], nan=0.0, posinf=0.0, neginf=0.0)
-        return (
-            self._observations["policy"],
-            reward.view(-1, 1),
-            terminated.view(-1, 1),
-            truncated.view(-1, 1),
-            self._info,
-        )
+        return self._observations["policy"], reward.view(-1, 1), terminated.view(-1, 1), truncated.view(-1, 1), self._info
 
     def reset(self) -> Tuple[torch.Tensor, Any]:
         info = {}
@@ -208,12 +202,10 @@ class SkrlSequentialLogTrainer(Trainer):
         for timestep in tqdm.tqdm(range(self.initial_timestep, self.timesteps), disable=self.disable_progressbar):
             # compute actions
             with torch.no_grad():
-                actions = torch.vstack(
-                    [
-                        agent.act(states[scope[0] : scope[1]], timestep=timestep, timesteps=self.timesteps)[0]
-                        for agent, scope in zip(self.agents, self.agents_scope)
-                    ]
-                )
+                actions = torch.vstack([
+                    agent.act(states[scope[0]: scope[1]], timestep=timestep, timesteps=self.timesteps)[0]
+                    for agent, scope in zip(self.agents, self.agents_scope)
+                ])
 
             # step the environments
             next_states, rewards, terminated, truncated, infos = self.env.step(actions)
@@ -223,12 +215,12 @@ class SkrlSequentialLogTrainer(Trainer):
                 for agent, scope in zip(self.agents, self.agents_scope):
                     # track data
                     agent.record_transition(
-                        states=states[scope[0] : scope[1]],
-                        actions=actions[scope[0] : scope[1]],
-                        rewards=rewards[scope[0] : scope[1]],
-                        next_states=next_states[scope[0] : scope[1]],
-                        terminated=terminated[scope[0] : scope[1]],
-                        truncated=truncated[scope[0] : scope[1]],
+                        states=states[scope[0]: scope[1]],
+                        actions=actions[scope[0]: scope[1]],
+                        rewards=rewards[scope[0]: scope[1]],
+                        next_states=next_states[scope[0]: scope[1]],
+                        terminated=terminated[scope[0]: scope[1]],
+                        truncated=truncated[scope[0]: scope[1]],
                         infos=infos,
                         timestep=timestep,
                         timesteps=self.timesteps,
