@@ -38,11 +38,17 @@ from pxr import Gf, UsdGeom  # noqa: F401, E402
 
 import rover_envs.mdp as mdp  # noqa: F401, E402
 from rover_envs.assets.robots.aau_rover import AAU_ROVER_CFG  # noqa: F401, E402
+
 # Avoid Circular Import
 from rover_envs.assets.robots.aau_rover_simple import AAU_ROVER_SIMPLE_CFG  # noqa: F401, E402
 from rover_envs.mdp.actions.ackermann_actions import AckermannActionNonVec  # noqa: F401, E402
-from rover_envs.utils.ros2.publishers import (RoverPose, goal_position, publish_camera_info,  # noqa: F401, E402
-                                              publish_depth, publish_rgb)
+from rover_envs.utils.ros2.publishers import (
+    RoverPose,
+    goal_position,
+    publish_camera_info,  # noqa: F401, E402
+    publish_depth,
+    publish_rgb,
+)
 from rover_envs.utils.ros2.subscribers import TwistSubscriber  # noqa: F401, E402
 
 if TYPE_CHECKING:
@@ -59,7 +65,8 @@ from rover_envs.assets.terrains.mars import MarsTerrainSceneCfg  # noqa: F401, E
 
 @configclass
 class RoverEmptySceneCfg(InteractiveSceneCfg):
-    """ Configuration for the empty scene """
+    """Configuration for the empty scene"""
+
     # Add ground plane
     ground = AssetBaseCfg(prim_path="/World/GroundPlane", spawn=sim_utils.GroundPlaneCfg())
     # Ground Terrain
@@ -105,12 +112,11 @@ class RoverEmptySceneCfg(InteractiveSceneCfg):
     )
 
     # Add the robot
-    robot: ArticulationCfg = AAU_ROVER_SIMPLE_CFG.replace(
-        prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = AAU_ROVER_SIMPLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
 
 def setup_scene():
-    """ Setup the scene """
+    """Setup the scene"""
     sim_cfg = sim_utils.SimulationCfg(
         device=DEVICE,
         use_gpu_pipeline=False,
@@ -135,7 +141,7 @@ def setup_camera():
         prim_path="/World/envs/env_0/Robot/Body/Camera",
         resolution=(1280, 720),
         translation=([-0.151, 0, 0.73428]),
-        orientation=(rot_utils.euler_angles_to_quats(np.array([0, 30, 0]), degrees=True))
+        orientation=(rot_utils.euler_angles_to_quats(np.array([0, 30, 0]), degrees=True)),
     )
 
     camera.initialize()
@@ -155,7 +161,7 @@ def spin_executor(executor):
 
 
 def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
-    """ Run the simulation """
+    """Run the simulation"""
     # Get the robot
     goal_position_list = torch.tensor([7.0, 7.0], dtype=torch.float32)
     sphere_prim = sim.stage.DefinePrim("/World/target", "Sphere")
@@ -209,7 +215,7 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         min_steering_radius=0.8,
         steering_joint_names=[".*Steer_Revolute"],
         drive_joint_names=[".*Drive_Continuous"],
-        offset=-0.0135
+        offset=-0.0135,
     )
     reset_scene(robot, scene)
     rover_articulation_manager = AckermannActionNonVec(action_cfg, robot, num_envs=args_cli.num_envs, device=DEVICE)
@@ -233,7 +239,7 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             reset_scene(robot, scene)
 
         if time.time() - timer > 0.5:
-            robot_position_publisher.publish_robot_position(robot.data.root_state_w[0, :7])
+            robot_position_publisher.publish_robot_position(robot.data.root_link_state_w[0, :7])
             timer = time.time()
 
 
