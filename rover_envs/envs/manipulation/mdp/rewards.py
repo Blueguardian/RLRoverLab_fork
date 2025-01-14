@@ -46,10 +46,10 @@ def object_ee_distance(
 
 
 def ee_closed_near_object(
-        env: ManagerBasedRLEnv,
-        std: float,
-        object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-        ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+    env: ManagerBasedRLEnv,
+    std: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
 ) -> torch.Tensor:
     """Reward the agent for reaching the object using tanh-kernel."""
     # extract the used quantities (to enable type-hinting)
@@ -82,7 +82,9 @@ def object_goal_distance(
     command = env.command_manager.get_command(command_name)
     # compute the desired position in the world frame
     des_pos_b = command[:, :3]
-    des_pos_w, _ = combine_frame_transforms(robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], des_pos_b)
+    des_pos_w, _ = combine_frame_transforms(
+        robot.data.root_link_state_w[:, :3], robot.data.root_link_state_w[:, 3:7], des_pos_b
+    )
     # distance of the end-effector to the object: (num_envs,)
     distance = torch.norm(des_pos_w - object.data.root_pos_w[:, :3], dim=1)
     # rewarded if the object is lifted above the threshold
