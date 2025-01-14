@@ -187,7 +187,7 @@ def train():
     env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
     # Wrap the environment
     # env: ManagerBasedRLEnv = SkrlOrbitVecWrapper(env)
-    env = SkrlVecEnvWrapper(env, ml_framework="torch")
+    env = SkrlVecEnvWrapper(env, ml_framework='torch')
     set_seed(args_cli_seed if args_cli_seed is not None else experiment_cfg["seed"])
 
     # Get the observation and action spaces
