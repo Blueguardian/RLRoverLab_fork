@@ -11,7 +11,7 @@ from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
-#parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")
+# parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
@@ -19,10 +19,9 @@ parser.add_argument("--num_envs", type=int, default=None, help="Number of enviro
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
-#args_cli = parser.parse_args()
-
+# args_cli = parser.parse_args()
 # launch the simulator
-#config = {"headless": args_cli.headless}
+# config = {"headless": args_cli.headless}
 # load cheaper kit config in headless
 # if args_cli.headless:
 #     app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.gym.headless.kit"
@@ -39,11 +38,12 @@ if args_cli.video:
 # clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
 
-#app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
+# app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
 
 app_launcher = AppLauncher(args_cli)
 
-from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
+from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper  # noqa: E402
+
 simulation_app = app_launcher.app
 
 carb_settings = carb.settings.get_settings()
@@ -94,7 +94,9 @@ def log_setup(experiment_cfg, env_cfg, agent):
     return log_dir
 
 
-def video_record(env: ManagerBasedRLEnv, log_dir: str, video: bool, video_length: int, video_interval: int) -> ManagerBasedRLEnv:
+def video_record(
+    env: ManagerBasedRLEnv, log_dir: str, video: bool, video_length: int, video_interval: int
+) -> ManagerBasedRLEnv:
     """
     Function to check and setup video recording.
 
@@ -129,6 +131,7 @@ from omni.isaac.lab_tasks.utils import parse_env_cfg  # noqa: E402
 from skrl.utils import set_seed  # noqa: E402, F401
 
 import rover_envs.envs.navigation.robots  # noqa: E402, F401
+
 # Import agents
 from rover_envs.learning.train import get_agent  # noqa: E402
 from rover_envs.utils.config import parse_skrl_cfg  # noqa: E402
@@ -167,7 +170,9 @@ from rover_envs.utils.skrl_utils import SkrlSequentialLogTrainer  # noqa: E402
 
 #     env.close()
 #     simulation_app.close()
-from skrl.trainers.torch import SequentialTrainer
+from skrl.trainers.torch import SequentialTrainer  # noqa: E402
+
+
 def train():
     args_cli_seed = args_cli.seed if args_cli.seed is not None else random.randint(0, 100000000)
     env_cfg = parse_env_cfg(args_cli.task, device="cuda:0" if not args_cli.cpu else "cpu", num_envs=args_cli.num_envs)
@@ -177,13 +182,12 @@ def train():
 
     # Create the environment
     render_mode = "rgb_array" if args_cli.video else None
-    env = gym.make(args_cli.task, cfg=env_cfg,
-                   viewport=args_cli.video, render_mode=render_mode)
+    env = gym.make(args_cli.task, cfg=env_cfg, viewport=args_cli.video, render_mode=render_mode)
     # Check if video recording is enabled
     env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
     # Wrap the environment
-    #env: ManagerBasedRLEnv = SkrlOrbitVecWrapper(env)
-    env = SkrlVecEnvWrapper(env, ml_framework="torch") 
+    # env: ManagerBasedRLEnv = SkrlOrbitVecWrapper(env)
+    env = SkrlVecEnvWrapper(env, ml_framework="torch")
     set_seed(args_cli_seed if args_cli_seed is not None else experiment_cfg["seed"])
 
     # Get the observation and action spaces
@@ -191,12 +195,12 @@ def train():
     num_actions = env.unwrapped.action_manager.action_term_dim[0]
     observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
     action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(num_actions,))
-    print(f"Observation space: {observation_space.shape}")
+    print(f'Observation space: {observation_space.shape}')
     print(f'Action space: {action_space.shape}')
     print(f'num envs: {env.num_envs}')
     print(f'env obs space: {env.observation_space}')
     print(f'env action space: {env.action_space}')
-    #exit()
+    # exit()
     trainer_cfg = experiment_cfg["trainer"]
 
     agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)
