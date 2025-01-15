@@ -8,16 +8,26 @@ import gymnasium as gym
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
-parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
-parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
-parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
-parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
-parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
+parser = argparse.ArgumentParser(
+    "Welcome to Orbit: Omniverse Robotics Environments!")
+parser.add_argument("--headless", action="store_true",
+                    default=False, help="Force display off at all times.")
+parser.add_argument("--video", action="store_true",
+                    default=False, help="Record videos during training.")
+parser.add_argument("--video_length", type=int, default=200,
+                    help="Length of the recorded video (in steps).")
+parser.add_argument("--video_interval", type=int, default=2000,
+                    help="Interval between video recordings (in steps).")
+parser.add_argument("--cpu", action="store_true",
+                    default=False, help="Use CPU pipeline.")
+parser.add_argument("--num_envs", type=int, default=None,
+                    help="Number of environments to simulate.")
+parser.add_argument("--task", type=str,
+                    default="AAURoverEnv-v0", help="Name of the task.")
+parser.add_argument("--seed", type=int, default=None,
+                    help="Seed used for the environment")
+parser.add_argument("--agent", type=str, default="PPO",
+                    help="Name of the agent.")
 args_cli = parser.parse_args()
 
 # launch the simulator
@@ -39,7 +49,9 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml  # noqa: E402
 # import omni.isaac.orbit_envs  # noqa: F401
 
 
-def video_record(env: ManagerBasedRLEnv, log_dir: str, video: bool, video_length: int, video_interval: int) -> ManagerBasedRLEnv:
+def video_record(
+        env: ManagerBasedRLEnv, log_dir: str, video: bool, video_length: int, video_interval: int
+) -> ManagerBasedRLEnv:
     """
     Function to check and setup video recording.
 
@@ -78,7 +90,8 @@ def log_setup(experiment_cfg, env_cfg, agent):
         Copied from the ORBIT framework.
     """
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
+    log_root_path = os.path.join(
+        "logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
 
@@ -118,30 +131,37 @@ from rover_envs.utils.skrl_utils import SkrlSequentialLogTrainer  # noqa: E402
 
 
 def main():
-    args_cli_seed = args_cli.seed if args_cli.seed is not None else random.randint(0, 100000000)
-    env_cfg = parse_env_cfg(args_cli.task, device="cuda:0" if not args_cli.cpu else "cpu", num_envs=args_cli.num_envs)
+    args_cli_seed = args_cli.seed if args_cli.seed is not None else random.randint(
+        0, 100000000)
+    env_cfg = parse_env_cfg(
+        args_cli.task, device="cuda:0" if not args_cli.cpu else "cpu", num_envs=args_cli.num_envs)
     experiment_cfg = parse_skrl_cfg(args_cli.task + f"_{args_cli.agent}")
 
     log_dir = log_setup(experiment_cfg, env_cfg, args_cli.agent)
 
     # Create the environment
-    env = gym.make(args_cli.task, cfg=env_cfg, headless=args_cli.headless, viewport=args_cli.video)
+    env = gym.make(args_cli.task, cfg=env_cfg,
+                   headless=args_cli.headless, viewport=args_cli.video)
     # Check if video recording is enabled
-    env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
+    env = video_record(env, log_dir, args_cli.video,
+                       args_cli.video_length, args_cli.video_interval)
     # Wrap the environment
     env: ManagerBasedRLEnv = SkrlOrbitVecWrapper(env)
-    set_seed(args_cli_seed if args_cli_seed is not None else experiment_cfg["seed"])
+    set_seed(
+        args_cli_seed if args_cli_seed is not None else experiment_cfg["seed"])
 
     # Get the observation and action spaces
     num_obs = env.observation_manager.group_obs_dim["policy"][0]
     num_actions = env.action_manager.action_term_dim[0]
-    observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
+    observation_space = gym.spaces.Box(
+        low=-math.inf, high=math.inf, shape=(num_obs,))
     action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(num_actions,))
 
     trainer_cfg = experiment_cfg["trainer"]
     trainer_cfg["timesteps"] = 1000000
 
-    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg)
+    agent = get_agent(args_cli.agent, env, observation_space,
+                      action_space, experiment_cfg)
 
     # Get the checkpoint path from the experiment configuration
     print(f'args_cli.task: {args_cli.task}')

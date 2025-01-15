@@ -20,7 +20,8 @@ SPHERE_MARKER_CFG = VisualizationMarkersCfg(
     markers={
         "sphere": sim_utils.SphereCfg(
             radius=0.2,
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(1.0, 0.0, 0.0)),
         ),
     }
 )
@@ -60,8 +61,10 @@ class TerrainBasedPositionCommand(CommandTerm):
         self.pos_command_b = torch.zeros_like(self.pos_command_w)
         self.heading_command_b = torch.zeros_like(self.heading_command_w)
         # -- metrics
-        self.metrics["error_pos"] = torch.zeros(self.num_envs, device=self.device)
-        self.metrics["error_heading"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["error_pos"] = torch.zeros(
+            self.num_envs, device=self.device)
+        self.metrics["error_heading"] = torch.zeros(
+            self.num_envs, device=self.device)
 
     def __str__(self) -> str:
         msg = "TerrainBasedPositionCommand:\n"
@@ -87,21 +90,27 @@ class TerrainBasedPositionCommand(CommandTerm):
         # sample new position targets from the terrain
         self.pos_command_w[env_ids] = self.terrain.sample_new_targets(env_ids)
         # offset the position command by the current root position
-        self.pos_command_w[env_ids, 2] += self.robot.data.default_root_state[env_ids, 2]
+        self.pos_command_w[env_ids,
+                           2] += self.robot.data.default_root_state[env_ids, 2]
         # random heading command
         r = torch.empty(len(env_ids), device=self.device)
         self.heading_command_w[env_ids] = r.uniform_(*self.cfg.ranges.heading)
 
     def _update_command(self):
         """Re-target the position command to the current root position and heading."""
-        target_vec = self.pos_command_w - self.robot.data.root_pos_w[:, :3]
-        self.pos_command_b[:] = quat_rotate_inverse(yaw_quat(self.robot.data.root_quat_w), target_vec)
-        self.heading_command_b[:] = wrap_to_pi(self.heading_command_w - self.robot.data.heading_w)
+        target_vec = self.pos_command_w - \
+            self.robot.data.root_link_pos_w[:, :3]
+        self.pos_command_b[:] = quat_rotate_inverse(
+            yaw_quat(self.robot.data.root_link_quat_w), target_vec)
+        self.heading_command_b[:] = wrap_to_pi(
+            self.heading_command_w - self.robot.data.heading_w)
 
     def _update_metrics(self):
         # logs data
-        self.metrics["error_pos"] = torch.norm(self.pos_command_w - self.robot.data.root_pos_w[:, :3], dim=1)
-        self.metrics["error_heading"] = torch.abs(wrap_to_pi(self.heading_command_w - self.robot.data.heading_w))
+        self.metrics["error_pos"] = torch.norm(
+            self.pos_command_w - self.robot.data.root_link_pos_w[:, :3], dim=1)
+        self.metrics["error_heading"] = torch.abs(wrap_to_pi(
+            self.heading_command_w - self.robot.data.heading_w))
 
     def _set_debug_vis_impl(self, debug_vis: bool):
 
@@ -132,8 +141,10 @@ class TerrainBasedPositionCommand(CommandTerm):
 
         # update the arrow marker
         zero_vec = torch.zeros_like(self.heading_command_w)
-        quaternion = quat_from_euler_xyz(zero_vec, zero_vec, self.heading_command_w)
-        position_arrow_w = self.pos_command_w + torch.tensor([0.0, 0.0, 0.25], device=self.device)
+        quaternion = quat_from_euler_xyz(
+            zero_vec, zero_vec, self.heading_command_w)
+        position_arrow_w = self.pos_command_w + \
+            torch.tensor([0.0, 0.0, 0.25], device=self.device)
         self.arrow_goal_visualizer.visualize(position_arrow_w, quaternion)
 
 
@@ -141,7 +152,8 @@ class RoverTerrainImporter(TerrainImporter):
     def __init__(self, cfg: TerrainImporterCfg):
         super().__init__(cfg)
         self._cfg = cfg
-        self._terrainManager = TerrainManager(num_envs=self._cfg.num_envs, device=self.device)
+        self._terrainManager = TerrainManager(
+            num_envs=self._cfg.num_envs, device=self.device)
         self.target_distance = 9.0
 
     def sample_new_targets(self, env_ids):
@@ -149,7 +161,8 @@ class RoverTerrainImporter(TerrainImporter):
         original_env_ids = env_ids
 
         # Initialize the target position
-        target_position = torch.zeros(self._cfg.num_envs, 3, device=self.device)
+        target_position = torch.zeros(
+            self._cfg.num_envs, 3, device=self.device)
 
         # Sample new targets
         reset_buf_len = len(env_ids)
@@ -157,7 +170,8 @@ class RoverTerrainImporter(TerrainImporter):
             # sample new random targets
             # print(reset_buf_len)
             # print(f'env_ids: {env_ids}')
-            target_position[env_ids] = self.generate_random_targets(env_ids, target_position)
+            target_position[env_ids] = self.generate_random_targets(
+                env_ids, target_position)
 
             # Here we check if the target is valid, and if not, we resample a new random target
             env_ids, reset_buf_len = self._terrainManager.check_if_target_is_valid(
@@ -184,8 +198,10 @@ class RoverTerrainImporter(TerrainImporter):
         theta = torch.rand(len(env_ids), device=self.device) * 2 * torch.pi
 
         # set the target x and y positions
-        target_position[env_ids, 0] = torch.cos(theta) * radius + self.env_origins[env_ids, 0]
-        target_position[env_ids, 1] = torch.sin(theta) * radius + self.env_origins[env_ids, 1]
+        target_position[env_ids, 0] = torch.cos(
+            theta) * radius + self.env_origins[env_ids, 0]
+        target_position[env_ids, 1] = torch.sin(
+            theta) * radius + self.env_origins[env_ids, 1]
 
         return target_position[env_ids]
 

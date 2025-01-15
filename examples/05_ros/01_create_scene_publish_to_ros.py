@@ -15,13 +15,15 @@ from rclpy.executors import MultiThreadedExecutor
 
 parser = argparse.ArgumentParser(description="Empty Scene")
 
-parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to create")
+parser.add_argument("--num_envs", type=int, default=1,
+                    help="Number of environments to create")
 
 args_cli = parser.parse_args()
 
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
-carb.settings.get_settings().set("persistent/app/omniverse/gamepadCameraControl", False)
+carb.settings.get_settings().set(
+    "persistent/app/omniverse/gamepadCameraControl", False)
 from omni.isaac.core.utils.extensions import enable_extension  # noqa: F401, E402
 
 enable_extension("omni.isaac.ros2_bridge")
@@ -42,7 +44,7 @@ from rover_envs.assets.robots.aau_rover import AAU_ROVER_CFG  # noqa: F401, E402
 from rover_envs.assets.robots.aau_rover_simple import AAU_ROVER_SIMPLE_CFG  # noqa: F401, E402
 from rover_envs.mdp.actions.ackermann_actions import AckermannActionNonVec  # noqa: F401, E402
 from rover_envs.utils.ros2.publishers import publish_camera_info  # noqa: F401, E402
-from rover_envs.utils.ros2.publishers import RoverPose, goal_position, publish_depth, publish_rgb
+from rover_envs.utils.ros2.publishers import RoverPose, goal_position, publish_depth, publish_rgb  # noqa: F401, E402
 from rover_envs.utils.ros2.subscribers import TwistSubscriber  # noqa: F401, E402
 
 if TYPE_CHECKING:
@@ -62,7 +64,8 @@ class RoverEmptySceneCfg(InteractiveSceneCfg):
     """Configuration for the empty scene"""
 
     # Add ground plane
-    ground = AssetBaseCfg(prim_path="/World/GroundPlane", spawn=sim_utils.GroundPlaneCfg())
+    ground = AssetBaseCfg(prim_path="/World/GroundPlane",
+                          spawn=sim_utils.GroundPlaneCfg())
     # Ground Terrain
     # terrain = TerrainImporterCfg(
     #     class_type=TerrainImporter,
@@ -106,7 +109,8 @@ class RoverEmptySceneCfg(InteractiveSceneCfg):
     )
 
     # Add the robot
-    robot: ArticulationCfg = AAU_ROVER_SIMPLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = AAU_ROVER_SIMPLE_CFG.replace(
+        prim_path="{ENV_REGEX_NS}/Robot")
 
 
 def setup_scene():
@@ -135,7 +139,8 @@ def setup_camera():
         prim_path="/World/envs/env_0/Robot/Body/Camera",
         resolution=(1280, 720),
         translation=([-0.151, 0, 0.73428]),
-        orientation=(rot_utils.euler_angles_to_quats(np.array([0, 30, 0]), degrees=True)),
+        orientation=(rot_utils.euler_angles_to_quats(
+            np.array([0, 30, 0]), degrees=True)),
     )
 
     camera.initialize()
@@ -163,14 +168,16 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
 
     # Set the sphere's attributes
     sphere_geom.GetRadiusAttr().Set(0.3)
-    sphere_geom.AddTranslateOp().Set(value=(goal_position_list[0], goal_position_list[1], 0.0))
+    sphere_geom.AddTranslateOp().Set(
+        value=(goal_position_list[0], goal_position_list[1], 0.0))
 
     # transform = UsdGeom.TransformAP
 
     # sphere_geom.GetPrim().SetTranslate(Gf.Vec3d(goal_position_list[0], goal_position_list[1], 0.0))
     rclpy.init()
     cmd_vel_subscriber = TwistSubscriber(topic_name='cmd_vel')
-    position_publisher = goal_position(topic_name='goal_position', goal_position=goal_position_list.numpy())
+    position_publisher = goal_position(
+        topic_name='goal_position', goal_position=goal_position_list.numpy())
     robot_position_publisher = RoverPose(topic_name='robot_pose')
 
     # thread = threading.Thread(target=rclpy.spin, args=(cmd_vel_subscriber, ), daemon=True)
@@ -179,7 +186,8 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     executor = MultiThreadedExecutor()
     executor.add_node(cmd_vel_subscriber)
     executor.add_node(position_publisher)
-    thread = threading.Thread(target=spin_executor, args=(executor,), daemon=True)
+    thread = threading.Thread(target=spin_executor,
+                              args=(executor,), daemon=True)
     thread.start()
 
     robot: RoverArticulation = scene["robot"]
@@ -190,7 +198,8 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # scene.env_origins
         robot.write_root_state_to_sim(root_state)
 
-        joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
+        joint_pos, joint_vel = robot.data.default_joint_pos.clone(
+        ), robot.data.default_joint_vel.clone()
         joint_pos += torch.randn_like(joint_pos) * 0.1
         robot.write_joint_state_to_sim(joint_pos, joint_vel)
 
@@ -198,7 +207,7 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         print("Reset")
 
     def goal_distance():
-        return np.linalg.norm(robot.data.root_pos_w[0, :2] - goal_position_list)
+        return np.linalg.norm(robot.data.root_link_pos_w[0, :2] - goal_position_list)
 
     action_cfg = mdp.AckermannActionCfg(
         asset_name="robot",
@@ -212,7 +221,8 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         offset=-0.0135,
     )
     reset_scene(robot, scene)
-    rover_articulation_manager = AckermannActionNonVec(action_cfg, robot, num_envs=args_cli.num_envs, device=DEVICE)
+    rover_articulation_manager = AckermannActionNonVec(
+        action_cfg, robot, num_envs=args_cli.num_envs, device=DEVICE)
 
     sim_dt = sim.get_physics_dt()
 
@@ -233,7 +243,8 @@ def run_simulation(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             reset_scene(robot, scene)
 
         if time.time() - timer > 0.5:
-            robot_position_publisher.publish_robot_position(robot.data.root_link_state_w[0, :7])
+            robot_position_publisher.publish_robot_position(
+                robot.data.root_link_state_w[0, :7])
             timer = time.time()
 
 
