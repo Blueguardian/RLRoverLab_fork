@@ -37,7 +37,8 @@ def SkrlVecEnvWrapper(env: ManagerBasedRLEnv):
     """
     # check that input is valid
     if not isinstance(env.unwrapped, ManagerBasedRLEnv):
-        raise ValueError(f"The environment must be inherited from ManagerBasedRLEnv. Environment type: {type(env)}")
+        raise ValueError(
+            f"The environment must be inherited from ManagerBasedRLEnv. Environment type: {type(env)}")
     # wrap and return the environment
     return wrap_env(env, wrapper="isaac-orbit")
 
@@ -53,11 +54,20 @@ class SkrlOrbitVecWrapper(IsaacLabWrapper):
         super().__init__(env)
 
     def step(self, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Any]:
-        actions = actions.nan_to_num(nan=0.0000001, posinf=0.000001, neginf=0.00001)
+        actions = actions.nan_to_num(
+            nan=0.0000001, posinf=0.000001, neginf=0.00001)
 
-        self._observations, reward, terminated, truncated, self._info = self._env.step(actions)
-        self._obs_dict["policy"] = torch.nan_to_num(self._obs_dict["policy"], nan=0.0, posinf=0.0, neginf=0.0)
-        return self._observations["policy"], reward.view(-1, 1), terminated.view(-1, 1), truncated.view(-1, 1), self._info
+        self._observations, reward, terminated, truncated, self._info = self._env.step(
+            actions)
+        self._obs_dict["policy"] = torch.nan_to_num(
+            self._obs_dict["policy"], nan=0.0, posinf=0.0, neginf=0.0)
+        return (
+            self._observations["policy"],
+            reward.view(-1, 1),
+            terminated.view(-1, 1),
+            truncated.view(-1, 1),
+            self._info
+        )
 
     def reset(self) -> Tuple[torch.Tensor, Any]:
         info = {}
@@ -65,7 +75,8 @@ class SkrlOrbitVecWrapper(IsaacLabWrapper):
             self._reset_once = False
             self._obs_dict, info = self._env.reset()
 
-        self._obs_dict["policy"] = torch.nan_to_num(self._obs_dict["policy"], nan=0.0, posinf=0.0, neginf=0.0)
+        self._obs_dict["policy"] = torch.nan_to_num(
+            self._obs_dict["policy"], nan=0.0, posinf=0.0, neginf=0.0)
         return self._obs_dict["policy"].nan_to_num(nan=0.01), info
 
 
@@ -143,12 +154,15 @@ class SkrlSequentialLogTrainer(Trainer):
         # training loop
         for timestep in tqdm.tqdm(range(self.timesteps), disable=self.disable_progressbar):
             # pre-interaction
-            self.agents.pre_interaction(timestep=timestep, timesteps=self.timesteps)
+            self.agents.pre_interaction(
+                timestep=timestep, timesteps=self.timesteps)
             # compute actions
             with torch.no_grad():
-                actions = self.agents.act(states, timestep=timestep, timesteps=self.timesteps)[0]
+                actions = self.agents.act(
+                    states, timestep=timestep, timesteps=self.timesteps)[0]
             # step the environments
-            next_states, rewards, terminated, truncated, infos = self.env.step(actions)
+            next_states, rewards, terminated, truncated, infos = self.env.step(
+                actions)
             # note: here we do not call render scene since it is done in the env.step() method
             # record the environments' transitions
             with torch.no_grad():
@@ -169,7 +183,8 @@ class SkrlSequentialLogTrainer(Trainer):
                     if isinstance(v, torch.Tensor) and v.numel() == 1:
                         self.agents.track_data(f"EpisodeInfo / {k}", v.item())
             # post-interaction
-            self.agents.post_interaction(timestep=timestep, timesteps=self.timesteps)
+            self.agents.post_interaction(
+                timestep=timestep, timesteps=self.timesteps)
             # reset the environments
             # note: here we do not call reset scene since it is done in the env.step() method
             # update states
@@ -203,12 +218,14 @@ class SkrlSequentialLogTrainer(Trainer):
             # compute actions
             with torch.no_grad():
                 actions = torch.vstack([
-                    agent.act(states[scope[0]: scope[1]], timestep=timestep, timesteps=self.timesteps)[0]
+                    agent.act(states[scope[0]: scope[1]],
+                              timestep=timestep, timesteps=self.timesteps)[0]
                     for agent, scope in zip(self.agents, self.agents_scope)
                 ])
 
             # step the environments
-            next_states, rewards, terminated, truncated, infos = self.env.step(actions)
+            next_states, rewards, terminated, truncated, infos = self.env.step(
+                actions)
 
             with torch.no_grad():
                 # write data to TensorBoard
@@ -231,7 +248,8 @@ class SkrlSequentialLogTrainer(Trainer):
                             if isinstance(v, torch.Tensor) and v.numel() == 1:
                                 agent.track_data(k, v.item())
                     # perform post-interaction
-                    super(type(agent), agent).post_interaction(timestep=timestep, timesteps=self.timesteps)
+                    super(type(agent), agent).post_interaction(
+                        timestep=timestep, timesteps=self.timesteps)
 
                 # reset environments
                 # note: here we do not call reset scene since it is done in the env.step() method

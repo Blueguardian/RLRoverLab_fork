@@ -1,4 +1,3 @@
-
 from gymnasium.spaces.box import Box
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 
@@ -36,7 +35,7 @@ def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, actio
 
 def gaussian_model_skrl(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
 
     mlp_input_size = 5
 
@@ -67,7 +66,7 @@ def gaussian_model_skrl(env: ManagerBasedRLEnv, observation_space: Box, action_s
 
 def double_critic_deterministic_model_skrl(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
 
     mlp_input_size = 4
 
