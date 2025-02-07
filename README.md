@@ -47,3 +47,19 @@ https://github.com/user-attachments/assets/44844311-87cd-45cb-a933-f451376f27d8
 If you have questions, suggestions, feel free to contact us.
 
 - **Contact Us**: For direct inquiries, reach out to Anton Bjørndahl Mortensen at [antonbm2008@gmail.com](mailto:antonbm2008@gmail.com).
+
+
+## Citation
+
+Please cite [this paper](https://ieeexplore.ieee.org/abstract/document/10687686) if you use this suite in your work:
+
+```bibtex
+@inproceedings{mortensen2024rlroverlab,
+  title={RLRoverLAB: An Advanced Reinforcement Learning Suite for Planetary Rover Simulation and Training},
+  author={Mortensen, Anton Bj{\o}rndahl and B{\o}gh, Simon},
+  booktitle={2024 International Conference on Space Robotics (iSpaRo)},
+  pages={273--277},
+  year={2024},
+  organization={IEEE}
+}
+```
