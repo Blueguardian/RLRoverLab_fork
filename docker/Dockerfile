@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Clone Isaac Lab
 RUN git clone https://github.com/isaac-sim/IsaacLab ${ISAAC_LAB_PATH}
-RUN /bin/bash -c "cd ${ISAAC_LAB_PATH} && git checkout 01c8f25"
+RUN /bin/bash -c "cd ${ISAAC_LAB_PATH} && git checkout -b 157c6b7"
 # Create symlink to Isaac Sim
 RUN ln -sf ${ISAAC_SIM_PATH} ${ISAAC_LAB_PATH}/_isaac_sim
 
@@ -40,6 +40,9 @@ RUN echo "alias isaaclab=${ISAAC_LAB_PATH}/isaaclab.sh" >> ${HOME}/.bashrc && \
     echo "alias tensorboard='${ISAAC_SIM_PATH}/python.sh ${ISAAC_SIM_PATH}/tensorboard'" >> ${HOME}/.bashrc && \
     echo "export TZ=$(date +%Z)" >> ${HOME}/.bashrc \
     echo "export TZ=$(date +%Z)" >> ${HOME}/.bashrc
+
+# Configure /workspace/isaac_rover as a safe directory, so that Weights & Biases can be used.
+RUN git config --global --add safe.directory /workspace/isaac_rover
 
 # Set working directory
 WORKDIR ${ROVER_LAB_PATH}
