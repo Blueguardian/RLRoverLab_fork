@@ -6,6 +6,7 @@ import torch
 from isaaclab.assets.articulation import Articulation
 from isaaclab.envs import ManagerBasedEnv
 from isaaclab.managers.action_manager import ActionTerm
+from dataclasses import MISSING
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv  # noqa: F811
@@ -13,9 +14,12 @@ if TYPE_CHECKING:
 
 
 class SkidSteerAction(ActionTerm):
-    """Action term for controlling a skid-steered four-wheeled mobile robot."""
+    """
+    Action term for controlling a skid-steered mobile robot
+    Should be considered similar to
+    """
 
-    cfg: actions_cfg.SkidSteerActionCfg
+    cfg: actions_cfg.SkidSteeringSimpleCfg
     _asset: Articulation
 
     _wheel_radius: float
@@ -68,7 +72,7 @@ class SkidSteerAction(ActionTerm):
 
     def apply_actions(self):
         """Apply computed wheel velocities to the robot."""
-        left_wheel_vels, right_wheel_vels = compute_skid_steer_velocities(
+        left_wheel_vels, right_wheel_vels = self.skid_steer_simple(
             self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device
         )
 
@@ -93,7 +97,7 @@ class SkidSteeringSimpleNonVec():
         # Initialize parameters
         self.cfg = cfg
         self.device = device
-        self.num_envs
+        self.num_envs = num_envs
         self._asset = robot
 
         # Find the joint ids and names for the drive and steering joints
@@ -140,38 +144,33 @@ class SkidSteeringSimpleNonVec():
 
     def apply_actions(self):
         # Apply the actions to the rover
-        self._joint_vel = skidsteer_simple(
+        self._joint_vel = self.skid_steer_simple(
             self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device)
 
         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
 
-def skidsteer_simple(lin_vel, ang_vel, cfg, device):
-    """
-    Compute the velocities for a four-wheeled skid-steer robot.
 
-    Args:
-        lin_vel (torch.Tensor): Linear velocity (m/s).
-        ang_vel (torch.Tensor): Angular velocity (rad/s).
-        cfg (actions_cfg.SkidSteerActionCfg): Configuration for the skid-steer action.
-        device (torch.device): Torch device.
+    def add_slippage(self, vx, omega, track_width, wheel_radius, cfg):
+        """Accounting for slippage if it exists"""
 
-    Returns:
-        torch.Tensor: Left wheel velocities.
-        torch.Tensor: Right wheel velocities.
-    """
+        slip_factor = cfg.slip_factor
+        effective_omega: float
+        if slip_factor is not MISSING:
+            effective_omega = omega * (1 - slip_factor)
+        else:
+            effective_omega = omega
+        w_left = (vx - track_width * effective_omega) / wheel_radius
+        w_right = (vx + track_width * effective_omega) / wheel_radius
 
-    wheel_radius = cfg.wheel_radius
-    wl = cfg.wheelbase_length
-    offset = cfg.offset
-
-    # Check direction of the linear velocities
+        return w_left, w_right
 
 
-    # Compute wheel angular velocities
-    left_wheel_vel = (2 * lin_vel - ang_vel * wl) / (2 * wheel_radius)
-    right_wheel_vel = (2 * lin_vel + ang_vel * wl) / (2 * wheel_radius)
+    def skid_steer_simple(self, vx, omega, cfg, device):
+        """Compute skid-steering wheel velocities."""
 
-    # Create tensors for all left and right wheels
-    wheel_velocities = torch.stack([left_wheel_vel, right_wheel_vel, left_wheel_vel, right_wheel_vel])
+        track_width = cfg.track_width  # Track width (m)
+        wheel_r = cfg.wheel_radius  # Wheel radius (m)
 
-    return wheel_velocities
+        w_left, w_right = self.add_slippage(vx, omega, track_width, wheel_r, cfg)
+
+        return torch.stack([w_left, w_right, w_right, w_left], dim=1)  # Order: FL, FR, RR, RL
