@@ -9,7 +9,7 @@ from rover_envs.envs.navigation.utils.articulation.articulation import RoverArti
 _LEO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "leo_rover", "leo.usd")
 
-EXOMY_CFG = ArticulationCfg(
+LEO_ROVER_CFG = ArticulationCfg(
     class_type=RoverArticulation,
     spawn=sim_utils.UsdFileCfg(
         usd_path=_LEO_PATH,

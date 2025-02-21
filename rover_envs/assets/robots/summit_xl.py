@@ -9,7 +9,7 @@ from rover_envs.envs.navigation.utils.articulation.articulation import RoverArti
 _SUMMIT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "summit_xl", "summit_xl.usd")
 
-EXOMY_CFG = ArticulationCfg(
+SUMMIT_XL_CFG = ArticulationCfg(
     class_type=RoverArticulation,
     spawn=sim_utils.UsdFileCfg(
         usd_path=_SUMMIT_PATH,
