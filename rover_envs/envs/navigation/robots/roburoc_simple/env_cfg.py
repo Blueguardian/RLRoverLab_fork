@@ -8,7 +8,7 @@ from rover_envs.envs.navigation.rover_env_cfg import RoverEnvCfg
 
 
 @configclass
-class AAURoverEnvCfg(RoverEnvCfg):
+class RobuROCSimpleEnvCfg(RoverEnvCfg):
     """Configuration for the AAU rover environment."""
 
     def __post_init__(self):

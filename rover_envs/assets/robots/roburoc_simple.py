@@ -12,7 +12,7 @@ _ROBUROC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 ROBUROC_SIMPLE_CFG = ArticulationCfg(
     class_type=RoverArticulation,
     spawn=sim_utils.UsdFileCfg(
-        usd_path=_LEO_PATH,
+        usd_path=_ROBUROC_PATH,
         activate_contact_sensors=True,
         collision_props=sim_utils.CollisionPropertiesCfg(contact_offset=0.04, rest_offset=0.01),
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
