@@ -20,9 +20,8 @@ class LeoRoverEnvCfg(RoverEnvCfg):
         # Define parameters for the Skidsteering kinematics.
         self.actions.actions = mdp.SkidSteeringSimpleCfg(
             asset_name="robot",
-            wheelbase_length=0.37,
+            track_width=0.37,
             wheel_radius=0.0635,
             drive_joint_names=[".*Drive_Joint"],
-            slip_factor=0
             # offset=-0.0135
         )

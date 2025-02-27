@@ -62,6 +62,8 @@ class RoverEnv(ManagerBasedRLEnv):
             A tuple containing the observations, rewards, resets (terminated and truncated) and extras.
         """
         self.global_step_counter += 1
+        action[:,0] = 1.0
+        action[:,1] = 0.5
         # process actions
         self.action_manager.process_action(action)
         # perform physics stepping

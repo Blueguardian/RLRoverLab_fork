@@ -20,7 +20,7 @@ class SummitXLEnvCfg(RoverEnvCfg):
         # Define parameters for the Ackermann kinematics.
         self.actions.actions = mdp.SkidSteeringSimpleCfg(
             asset_name="robot",
-            wheelbase_length=0.470,
+            track_width=0.470,
             wheel_radius=0.1175,
             drive_joint_names=[".*Drive_Joint"]
             # offset=-0.0135

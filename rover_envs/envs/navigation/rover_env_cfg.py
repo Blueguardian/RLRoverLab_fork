@@ -37,7 +37,7 @@ from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBa
 
 
 @configclass
-class RoverSceneCfg(MarsTerrainSceneCfg):
+class RoverSceneCfg(DebugTerrainSceneCfg):
     """
     Rover Scene Configuration
 
@@ -75,15 +75,17 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     robot: ArticulationCfg = MISSING
     # AAU_ROVER_SIMPLE_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Robot")
-
+    
     contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
+        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Bogie|Boogie|Steer|Body)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )
+    
+
     # contact_sensor = None
 
     height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Body",
+        prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
         offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),

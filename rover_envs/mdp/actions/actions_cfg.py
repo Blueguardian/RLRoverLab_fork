@@ -66,7 +66,7 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
     offset: tuple[float, float] = 0.0
     """The offset of the action"""
 
-    wheelbase_length: float = MISSING
+    track_width: float = MISSING
     """The distnace between the two front wheels
        Assuming similar distance between all wheel sets"""
     
@@ -77,8 +77,8 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
     drive_joint_names: list[str] = MISSING
     """List of drive joints"""
 
-    slip_factor: float = MISSING
-    """Slip factor for wheels and terrain"""
+   #  slip_factor: float = MISSING
+   #  """Slip factor for wheels and terrain"""
 
-    drive_order = ["FL", "FR", "RR", "RL"]
+    drive_order = ["FL", "RL", "FR", "RR"]
     """Name of the drive joints in the above order"""

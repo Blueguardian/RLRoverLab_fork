@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import carb
 import torch
+import re
 from isaaclab.assets.articulation import Articulation
 from isaaclab.envs import ManagerBasedEnv
 from isaaclab.managers.action_manager import ActionTerm
@@ -30,15 +31,20 @@ class SkidSteerAction(ActionTerm):
     _scale: torch.Tensor
     _offset: torch.Tensor
 
+    
+
     def __init__(self, cfg: actions_cfg.SkidSteerActionCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)
 
-        self._drive_joint_ids, self, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
+        self.pattern = re.compile(r"(RR|RL|FR|FL)")
+
+        self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
 
         drive_order = cfg.drive_order
-        sorted_drive_joint_names = sorted(self._left_wheel_joint_names, key=lambda x: drive_order.index(x[:2])) # Sorted drive joint names
+        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: next((drive_order.index(prefix) for prefix in drive_order if prefix in x), float('inf')))
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)} # Origin positions for drive joints
         self._sorted_drive_ids = {self._drive_joint_ids[original_drive_id_positions[name]] for name in sorted_drive_joint_names}
+        carb.log_info(f"Sorted drives: {self._sorted_drive_ids}")
 
         # Define tensors for actions and joint velocities
         self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
@@ -48,6 +54,13 @@ class SkidSteerAction(ActionTerm):
         # Scale and offset for action processing
         self._scale = torch.tensor(self.cfg.scale, device=self.device).unsqueeze(0)
         self._offset = torch.tensor(self.cfg.offset, device=self.device).unsqueeze(0)
+
+    def extract_drive_key(self, name):
+        match = self.pattern.search(name)
+        if match:
+            return self.drive_order(match.group(0))
+        else:
+            raise Exception.with_traceback
 
     @property
     def action_dim(self) -> int:
@@ -72,7 +85,7 @@ class SkidSteerAction(ActionTerm):
 
     def apply_actions(self):
         """Apply computed wheel velocities to the robot."""
-        left_wheel_vels, right_wheel_vels = self.skid_steer_simple(
+        self._joint_vel = skid_steer_simple(
             self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device
         )
 
@@ -99,13 +112,15 @@ class SkidSteeringSimpleNonVec():
         self.device = device
         self.num_envs = num_envs
         self._asset = robot
+        self.pattern = re.compile(r"(RR|RL|FR|FL)")
 
         # Find the joint ids and names for the drive and steering joints
         self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
 
         # Remap joints to the order specified in the config.
         drive_order = cfg.drive_order
-        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
+        # sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
+        sorted_drive_joint_names = sorted(self._drive_joint_names, key=self.extract_drive_key)
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)}
         self._sorted_drive_ids = [self._drive_joint_ids[original_drive_id_positions[name]]
                                   for name in sorted_drive_joint_names]
@@ -120,6 +135,9 @@ class SkidSteeringSimpleNonVec():
         # Save the scale and offset for the actions
         self._scale = torch.tensor(self.cfg.scale, device=self.device).unsqueeze(0)
         self._offset = torch.tensor(self.cfg.offset, device=self.device).unsqueeze(0)
+
+    
+
 
     @property
     def action_dim(self) -> int:
@@ -144,33 +162,32 @@ class SkidSteeringSimpleNonVec():
 
     def apply_actions(self):
         # Apply the actions to the rover
-        self._joint_vel = self.skid_steer_simple(
+        self._joint_vel = skid_steer_simple(
             self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device)
 
         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
 
+def skid_steer_simple(vx, omega, cfg, device):
+    """Compute skid-steering wheel velocities."""
 
-    def add_slippage(self, vx, omega, track_width, wheel_radius, cfg):
-        """Accounting for slippage if it exists"""
+    # Instance configuration variables
+    track_width = cfg.track_width  # Track width (m)
+    wheel_r = cfg.wheel_radius  # Wheel radius (m)
 
-        slip_factor = cfg.slip_factor
-        effective_omega: float
-        if slip_factor is not MISSING:
-            effective_omega = omega * (1 - slip_factor)
-        else:
-            effective_omega = omega
-        w_left = (vx - track_width * effective_omega) / wheel_radius
-        w_right = (vx + track_width * effective_omega) / wheel_radius
+    # Check direction of velocities
+    lin_direction: torch.Tensor = torch.sign(vx)
+    ang_direction: torch.Tensor = torch.sign(omega)
 
-        return w_left, w_right
+    # lin_direction = torch.where(lin_direction == 0, lin_direction+1, lin_direction)
 
+    lin_vel = torch.abs(vx)
+    ang_vel = torch.abs(omega)
 
-    def skid_steer_simple(self, vx, omega, cfg, device):
-        """Compute skid-steering wheel velocities."""
+    vel_left = vx + ((omega * track_width) / 2) / wheel_r
+    vel_right = vx - ((omega * track_width) / 2) / wheel_r
+    w_left = vel_left
+    w_right = vel_right
 
-        track_width = cfg.track_width  # Track width (m)
-        wheel_r = cfg.wheel_radius  # Wheel radius (m)
+    wheel_vel = torch.stack([w_left, w_left, w_right, w_right], dim=1)  # Order: FL, FR, RL, RR
 
-        w_left, w_right = self.add_slippage(vx, omega, track_width, wheel_r, cfg)
-
-        return torch.stack([w_left, w_right, w_right, w_left], dim=1)  # Order: FL, FR, RR, RL
+    return wheel_vel
