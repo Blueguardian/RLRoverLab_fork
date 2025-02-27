@@ -80,5 +80,5 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
    #  slip_factor: float = MISSING
    #  """Slip factor for wheels and terrain"""
 
-    drive_order = ["FL", "RL", "FR", "RR"]
+    drive_order = ["FL_Drive", "RL_Drive", "FR_Drive", "RR_Drive"]
     """Name of the drive joints in the above order"""

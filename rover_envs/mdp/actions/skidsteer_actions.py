@@ -42,6 +42,7 @@ class SkidSteerAction(ActionTerm):
 
         drive_order = cfg.drive_order
         sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: next((drive_order.index(prefix) for prefix in drive_order if prefix in x), float('inf')))
+
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)} # Origin positions for drive joints
         self._sorted_drive_ids = {self._drive_joint_ids[original_drive_id_positions[name]] for name in sorted_drive_joint_names}
         carb.log_info(f"Sorted drives: {self._sorted_drive_ids}")
@@ -176,17 +177,15 @@ def skid_steer_simple(vx, omega, cfg, device):
 
     # Check direction of velocities
     lin_direction: torch.Tensor = torch.sign(vx)
-    ang_direction: torch.Tensor = torch.sign(omega)
 
     # lin_direction = torch.where(lin_direction == 0, lin_direction+1, lin_direction)
-
     lin_vel = torch.abs(vx)
-    ang_vel = torch.abs(omega)
 
-    vel_left = vx + ((omega * track_width) / 2) / wheel_r
-    vel_right = vx - ((omega * track_width) / 2) / wheel_r
-    w_left = vel_left
-    w_right = vel_right
+    vel_left = torch.where(lin_vel == 0, -omega*2, lin_vel - (omega*2 * track_width / 2) * lin_direction)
+    vel_right = torch.where(lin_vel == 0, omega*2, lin_vel + (omega*2 * track_width / 2) * lin_direction)
+
+    w_left = vel_left / wheel_r
+    w_right = vel_right / wheel_r
 
     wheel_vel = torch.stack([w_left, w_left, w_right, w_right], dim=1)  # Order: FL, FR, RL, RR
 
