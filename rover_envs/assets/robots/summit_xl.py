@@ -34,18 +34,11 @@ SUMMIT_XL_CFG = ArticulationCfg(
     ),
     actuators={
         "base_drive": ImplicitActuatorCfg(
-            joint_names_expr=[".*Drive_Joint"],
+            joint_names_expr=[".*_Drive_Joint"],
             velocity_limit=6,
             effort_limit=12,
-            stiffness=100.0,
-            damping=4000.0,
-        ),
-        "passive_joints": ImplicitActuatorCfg(
-            joint_names_expr=[".*Bogie_Joint"],
-            velocity_limit=10,
-            effort_limit=0,
-            stiffness=0.0,
-            damping=0.0,
+            stiffness=1.0,
+            damping=1.0,
         ),
     },
 )
