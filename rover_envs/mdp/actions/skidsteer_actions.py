@@ -176,17 +176,12 @@ def skid_steer_simple(vx, omega, cfg, device):
     wheel_r = cfg.wheel_radius  # Wheel radius (m)
 
     # Check direction of velocities
-    lin_direction: torch.Tensor = torch.sign(vx)
 
-    # lin_direction = torch.where(lin_direction == 0, lin_direction+1, lin_direction)
     lin_vel = torch.abs(vx)
 
-    vel_left = torch.where(lin_vel == 0, -omega*2, lin_vel - (omega*2 * track_width / 2) * lin_direction)
-    vel_right = torch.where(lin_vel == 0, omega*2, lin_vel + (omega*2 * track_width / 2) * lin_direction)
+    vel_left = vx - (omega * track_width / 2) / wheel_r *2
+    vel_right = vx + (omega * track_width / 2) / wheel_r *2
 
-    w_left = vel_left / wheel_r
-    w_right = vel_right / wheel_r
-
-    wheel_vel = torch.stack([w_left, w_left, w_right, w_right], dim=1)  # Order: FL, FR, RL, RR
+    wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1)  # Order: FL, FR, RL, RR
 
     return wheel_vel

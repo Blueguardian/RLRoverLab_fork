@@ -40,7 +40,9 @@ SKRL_PPO_CONFIG_FILE = {
     "Exomy-v0_SAC": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_sac.yaml"),
     "Exomy-v0_RPO": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_rpo.yaml"),
     "AAURoverEnvCamera-v0_PPO": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_ppo.yaml"),
-    "leo_rover-v0_PPO": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_ppo.yaml")
+    "leo_rover-v0_PPO": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_ppo.yaml"),
+    "summit-v0_PPO": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_ppo.yaml"),
+    "roburoc_simple-v0_PPO": os.path.join(ORBIT_CUSTOM_ENVS_DATA_DIR, "skrl/rover_ppo.yaml")
 }
 
 
