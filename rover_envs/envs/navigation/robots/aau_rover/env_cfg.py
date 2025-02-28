@@ -20,7 +20,7 @@ class AAURoverEnvCfg(RoverEnvCfg):
         # Define parameters for the Ackermann kinematics.
         self.actions.actions = mdp.AckermannActionCfg(
             asset_name="robot",
-            track_width=0.849,
+            wheelbase_length=0.849,
             middle_wheel_distance=0.894,
             rear_and_front_wheel_distance=0.77,
             wheel_radius=0.1,

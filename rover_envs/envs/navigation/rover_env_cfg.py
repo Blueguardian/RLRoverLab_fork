@@ -77,7 +77,7 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
     #     prim_path="{ENV_REGEX_NS}/Robot")
     
     contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Bogie|Boogie|Steer|Body)",
+        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Bogie|Boogie|Steer|Body|Drive_Link|Bogie_Link)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )
     
