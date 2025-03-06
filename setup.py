@@ -9,11 +9,13 @@ INSTALL_REQUIRES = [
     "prettytable==3.3.0",
     "pymeshlab",
     "open3d",
+    "gdown",
     # devices
     "hidapi",
-    "skrl==1.3.0",
+    "skrl==1.4.1",
     "wandb",
     "opencv-python",
+    "isaaclab==2.0.1"
 ]
 
 # url=EXTENSION_TOML_DATA["package"]["repository"], # add later
@@ -37,6 +39,6 @@ setup(
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     packages=["rover_envs"],
-    classifiers=["Natural Language :: English", "Programming Language :: Python :: 3.7"],
+    classifiers=["Natural Language :: English", "Programming Language :: Python :: 3.10"],
     zip_safe=False,
 )
