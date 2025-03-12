@@ -16,7 +16,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg  # noqa: F401
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, CameraCfg, patterns
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.sim import PhysxCfg
 from isaaclab.sim import SimulationCfg as SimCfg
 from isaaclab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
@@ -37,7 +37,7 @@ from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBa
 
 
 @configclass
-class RoverSceneCfg(DebugTerrainSceneCfg):
+class RoverSceneCfg(MarsTerrainSceneCfg):
     """
     Rover Scene Configuration
 
@@ -75,17 +75,15 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
     robot: ArticulationCfg = MISSING
     # AAU_ROVER_SIMPLE_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Robot")
-    
+
     contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Bogie|Boogie|Steer|Body|Drive_Link|Bogie_Link)",
+        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body|Rocker)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )
-    
-
     # contact_sensor = None
 
     height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+        prim_path="{ENV_REGEX_NS}/Robot/Body",
         offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
