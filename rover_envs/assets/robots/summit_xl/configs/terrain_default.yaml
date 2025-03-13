@@ -1,6 +1,6 @@
 ---
 terrain:
-{
+  {
   obstacles:
   {
     no_obstacles: "False"
@@ -8,7 +8,7 @@ terrain:
   physics:
   {
     enable_stabilization: "True",
-    friction_correlation_distance: "0.025"
+    friction_correlation_distance: "0.025",
     gpu:
     {
       gpu_max_rigid_contact_count: "8388608",

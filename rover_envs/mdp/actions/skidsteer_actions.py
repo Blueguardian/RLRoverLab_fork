@@ -33,19 +33,15 @@ class SkidSteerAction(ActionTerm):
 
     
 
-    def __init__(self, cfg: actions_cfg.SkidSteerActionCfg, env: ManagerBasedEnv):
+    def __init__(self, cfg: actions_cfg.SkidSteeringSimpleCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)
-
-        self.pattern = re.compile(r"(RR|RL|FR|FL)")
-
         self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
 
         drive_order = cfg.drive_order
-        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: next((drive_order.index(prefix) for prefix in drive_order if prefix in x), float('inf')))
+        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
 
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)} # Origin positions for drive joints
         self._sorted_drive_ids = {self._drive_joint_ids[original_drive_id_positions[name]] for name in sorted_drive_joint_names}
-        carb.log_info(f"Sorted drives: {self._sorted_drive_ids}")
 
         # Define tensors for actions and joint velocities
         self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
@@ -55,13 +51,6 @@ class SkidSteerAction(ActionTerm):
         # Scale and offset for action processing
         self._scale = torch.tensor(self.cfg.scale, device=self.device).unsqueeze(0)
         self._offset = torch.tensor(self.cfg.offset, device=self.device).unsqueeze(0)
-
-    def extract_drive_key(self, name):
-        match = self.pattern.search(name)
-        if match:
-            return self.drive_order(match.group(0))
-        else:
-            raise Exception.with_traceback
 
     @property
     def action_dim(self) -> int:
@@ -81,7 +70,10 @@ class SkidSteerAction(ActionTerm):
 
     def process_actions(self, actions):
         """Process raw actions into velocities for the wheels."""
+
+        # actions[:] =
         self._raw_actions[:] = actions
+
         self._processed_actions = self.raw_actions * self._scale + self._offset
 
     def apply_actions(self):
@@ -112,8 +104,6 @@ class SkidSteeringSimpleNonVec():
         self.cfg = cfg
         self.device = device
         self.num_envs = num_envs
-        self._asset = robot
-        self.pattern = re.compile(r"(RR|RL|FR|FL)")
 
         # Find the joint ids and names for the drive and steering joints
         self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
@@ -121,7 +111,7 @@ class SkidSteeringSimpleNonVec():
         # Remap joints to the order specified in the config.
         drive_order = cfg.drive_order
         # sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
-        sorted_drive_joint_names = sorted(self._drive_joint_names, key=self.extract_drive_key)
+        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)}
         self._sorted_drive_ids = [self._drive_joint_ids[original_drive_id_positions[name]]
                                   for name in sorted_drive_joint_names]
@@ -170,18 +160,20 @@ class SkidSteeringSimpleNonVec():
 
 def skid_steer_simple(vx, omega, cfg, device):
     """Compute skid-steering wheel velocities."""
+    #
+    # vx[:][:] = 6
+    # omega[:][:] = 0
 
     # Instance configuration variables
     track_width = cfg.track_width  # Track width (m)
     wheel_r = cfg.wheel_radius  # Wheel radius (m)
-
-    # Check direction of velocities
 
     lin_vel = torch.abs(vx)
 
     vel_left = vx - (omega * track_width / 2) / wheel_r *2
     vel_right = vx + (omega * track_width / 2) / wheel_r *2
 
-    wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1)  # Order: FL, FR, RL, RR
+    #wheel_vel = torch.stack([vel_left, vel_right, vel_left, vel_right], dim=1)  # Order: FL, RL, FL, RR -> Leo rover
+    wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1) # Order FL, FR, RL, RR -> Summit
 
     return wheel_vel

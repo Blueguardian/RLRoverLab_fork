@@ -1,12 +1,12 @@
 ---
 name: summit,
-robot_model_path: ../summit_xl.usd,
-articulation_type: RoverArticulation,
+robot_model_path: /summit_xl/summit_xl.usd,
 controller_config: skidsteer,
 controller:
   {
-    scale: (1.0, 1.0),
-    offset: (0.0, 0.0),
+    asset_name: robot,
+    scale: [1.0, 1.0],
+    offset: [0.0, 0.0],
     track_width: 0.470,
     wheel_radius: 0.1175,
     drive_joint_names: [".*Drive_Joint"]
@@ -18,17 +18,17 @@ joints:
       joint_names_expr: [".*Drive_Joint"],
       velocity_limit: 6,
       effort_limit: 12,
-      stiffness: 100.0,
-      damping: 4000.0
+      stiffness: 5.0,
+      damping: 25.0
     },
-    passive_joints:
-    {
-      joint_names_expr: [".*Bogie_Joint"],
-      velocity_limit: 10,
-      effort_limit: 0,
-      stiffness: 0.0,
-      damping: 0.0,
-    }
+#    passive_joints:
+#    {
+#      joint_names_expr: [".*Bogie_Joint"],
+#      velocity_limit: 10,
+#      effort_limit: 0,
+#      stiffness: 0.0,
+#      damping: 0.0,
+#    }
   }
 collision_properties:
   {
@@ -37,7 +37,7 @@ collision_properties:
   }
 rigidBody_properties:
   {
-    max_linear_velocity: 3,
+    max_linear_velocity: 6,
     max_angular_velocity: 60.0,
     max_depenetration_velocity: 1.0,
     disable_gravity: false,
@@ -53,14 +53,14 @@ pose_config:
     init_pose: [0.0, 0.0, 0.0],
     joint_pose:
     {
-      pose_config:
-      {
-        names: [".*Steer_Revolute"],
-        values: [0.0]
-      },
+#      pose_config:
+#      {
+#        names: [".*Steer_Revolute"],
+#        values: [0.0]
+#      },
       velocity_config:
       {
-        names: [".*Steer_Revolute", ".*Drive_Continous"],
+        names: [".*Drive_Joint"],
         values: [0.0, 0.0]
       }
     }

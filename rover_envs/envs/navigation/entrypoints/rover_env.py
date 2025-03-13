@@ -63,6 +63,9 @@ class RoverEnv(ManagerBasedRLEnv):
         """
         self.global_step_counter += 1
         # process actions
+        # action = torch.zeros_like(action)
+        # action[0][:] = 0
+        # action[1][:] = 10
         self.action_manager.process_action(action)
         # perform physics stepping
         for _ in range(self.cfg.decimation):

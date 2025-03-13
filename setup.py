@@ -15,7 +15,8 @@ INSTALL_REQUIRES = [
     "skrl==1.4.1",
     "wandb",
     "opencv-python",
-    "isaaclab==2.0.1"
+    "isaaclab==2.0.1",
+    "ruamel.yaml"
 ]
 
 # url=EXTENSION_TOML_DATA["package"]["repository"], # add later

@@ -1,21 +1,32 @@
 from __future__ import annotations
 
-import inspect
+import inspect # noqa: F401
 import gymnasium as gym
-import ruamel.yaml
-from pathlib import Path
+import ruamel.yaml # noqa: F401
+from pathlib import Path # noqa: F401
+
 from isaaclab.utils import configclass
 import isaaclab.sim as sim_utils
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.actuators import ImplicitActuatorCfg
 from rover_envs.mdp.actions.actions_cfg import ACTION_CONFIGS, SkidSteeringSimpleCfg
-from rover_envs.envs.navigation.rover_env_cfg import RoverEnvCfg
+# from rover_envs.envs.navigation.rover_env_cfg import RoverEnvCfg
 from rover_envs.envs.navigation.learning.skrl import get_agent
+from rover_envs.envs.navigation.utils.articulation.articulation import RoverArticulation
 
-yaml = ruamel.yaml.YAML()
+yaml = ruamel.yaml.YAML(typ="safe")
 
 # Global dict to store configs
 CONFIG_CLASSES = {}
+
+def post_init_factory(robot_config, articulation_cfg, action_cfg):
+    """Factory function that generates a `__post_init__` method for dynamic classes."""
+    def __post_init__(self):
+        super(self.__class__, self).__post_init__()  # ✅ This now works correctly
+        self.scene.robot = articulation_cfg
+        self.actions.actions = action_cfg
+
+    return __post_init__
 
 class ConfigFactory:
     """ Dynamically allocate and initialize configuration classes for
@@ -29,7 +40,7 @@ class ConfigFactory:
 
     def __init__(self, root_folder: Path, base_class):
         self.root_folder = root_folder
-        self.parent_class = base_class
+        self.parent_class = configclass(base_class)
         print("Generating asset configurations...")
         self.config_classes = self._generate_cfgs()
 
@@ -41,8 +52,9 @@ class ConfigFactory:
         with open(file_path, "r") as f:
             return yaml.load(f)
 
-    def _class_name(self, folder: str, params: dict):
+    def _class_name(self, folder: Path, params: dict):
         """Generate class name based on folder name or from config"""
+        folder = folder.name
         return params.get("class_config", {}).get("config_name") or \
                "".join(word.capitalize() for word in folder.replace("-", "_").split("_")) + "EnvCfg"
 
@@ -88,7 +100,7 @@ class ConfigFactory:
         }
     def _action_cfg(self, params):
         """Selects and instantiates the action controller"""
-        action_type = params.get("action_type").lower()
+        action_type = str(params.get("action_type")).lower()
         ActionConfigClass = ACTION_CONFIGS.get(action_type, SkidSteeringSimpleCfg)
         action_params = inspect.signature(ActionConfigClass).parameters
         filtered_params = {
@@ -100,53 +112,46 @@ class ConfigFactory:
 
     def _articulation_cfg(self, params):
         """Handles the ArticulationCfg instance and instantiates it with filtered parameters"""
-        articulation_cfg = inspect.signature(ArticulationCfg).parameters
-        filtered_params = {
-            param: params.get(param, param_info.default if param_info.default is not inspect.Parameter.empty else None)
-            for param, param_info in articulation_cfg.items()
-        }
-        filtered_params.update({
-            "spawn": self._nestedDict(sim_utils.UsdFileCfg, params.get("spawn")),
-            "collision_props": self._nestedDict(sim_utils.CollisionPropertiesCfg,
-                                                           params.get("collision_properties")),
-            "rigid_props": self._nestedDict(sim_utils.RigidBodyPropertiesCfg,
-                                                       params.get("rigidBody_properties")),
-            "articulation_props": self._nestedDict(sim_utils.ArticulationRootPropertiesCfg,
-                                                              params.get("simulation_properties")),
-            "init_state": self._pose_config(params),
-            "actuators": self._actuators(params),
-        })
-        return ArticulationCfg(**filtered_params)
+        usd_path = Path(__file__).resolve().parent.parent.parent / ("robots" + str(params.get("robot_model_path")).split(",")[0])
+
+
+        ArticulationRobotCfg =  ArticulationCfg(
+            class_type=RoverArticulation,
+            spawn=self._nestedDict(sim_utils.UsdFileCfg, {
+                "usd_path": usd_path.absolute().as_posix(),
+                "activate_contact_sensors": True,
+                "collision_props": self._nestedDict(sim_utils.CollisionPropertiesCfg, params.get("collision_properties")),
+                "rigid_props": self._nestedDict(sim_utils.RigidBodyPropertiesCfg, params.get("rigidBody_properties")),
+                "articulation_props": self._nestedDict(sim_utils.ArticulationRootPropertiesCfg, params.get("simulation_properties")),
+            }),
+            init_state=self._pose_config(params),
+            actuators=self._actuators(params),
+            )
+        return ArticulationRobotCfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     def _generate_cfgs(self):
         """Creates configs based on each folder in the root_folder"""
         env_cfgs = {}
 
         for folder in self.root_folder.iterdir():
-            if not folder.is_dir():
+            if not folder.is_dir() or folder.name == "__pycache__" or folder.name == ".vscode":
                 continue
 
             # Load YAML configs
-            robot_cfg = self._load_yaml(folder / "robot_default.yaml")
-            training_cfg = self._load_yaml(folder / "training_default.yaml")
+            robot_cfg = self._load_yaml(folder / "configs" / "robot_default.yaml")
+            training_cfg = self._load_yaml(folder / "configs" / "training_default.yaml")
             # Generate or fetch class name
             class_name = self._class_name(folder, robot_cfg)
-            # Define __post_init__ method
-            def __post_init__(self):
-                super(self.__class__, self).__post_init__()
-                self.scene.robot = self._articulation_cfg(robot_cfg)
-                self.actions.actions = self._action_cfg(robot_cfg)
 
             # Define and register config class
             attributes = {
                 "__doc__": f"Configuration for {folder.name} rover environement.",
-                "__post_init__": __post_init__,
+                "__post_init__": post_init_factory(robot_cfg, self._articulation_cfg(robot_cfg), self._action_cfg(robot_cfg))
             }
 
             # Create the class
-            cls = type(class_name, (self.__class__,), attributes)
+            cls = type(class_name, (self.parent_class, self.__class__), attributes)
             cls = configclass(cls)
-
             env_cfgs[class_name] = cls
         return env_cfgs
 
@@ -161,11 +166,12 @@ class GymEnvRegistrar:
     def __init__(self, config_factory: ConfigFactory):
         self.config_factory = config_factory  # Use the generated config classes
         self.base_dir = Path(__file__).parent
+        print("Registering gym environments...")
         self.register_envs()
 
-    def _load_yaml(self, file_path):
+    def _load_yaml(self, file_path: Path):
         """Loads a YAML configuration file"""
-        if not file_path.exists():
+        if not file_path.is_file():
             return None
         with file_path.open("r") as stream:
             return yaml.load(stream)
@@ -177,7 +183,7 @@ class GymEnvRegistrar:
                 continue
 
             #Load per-environment configuration
-            learning_config = self._load_yaml(env_folder / "learning_default.yaml")
+            learning_config = self._load_yaml(env_folder / "configs" / "training_default.yaml")
             if not learning_config:
                 continue
 
@@ -186,7 +192,7 @@ class GymEnvRegistrar:
 
             #Generate paths for SKRL agent configs
             skrl_configs = {
-                algo: str(self.base_dir / f"../../envs/navigation/learning/skrl/configs/rover_{algo.lower()}.yaml")
+                algo: str(Path(__file__).parent.parent.parent.parent / f"envs/navigation/learning/skrl/configs/rover_{algo.lower()}.yaml")
                 for algo in algorithms
             }
 
@@ -197,8 +203,8 @@ class GymEnvRegistrar:
             if not env_config_class:
                 continue
 
-            #Generate Gym ID based on folder name (e.g., `mars_rover` → `MarsRoverEnv-v0`)
-            env_id = f"{env_folder.name.replace('-', '_').capitalize()}-v0"
+            #Generate Gym ID based on folder name
+            env_id = f"{env_folder.name}-v0"
 
             #Register the environment in Gym
             gym.register(
