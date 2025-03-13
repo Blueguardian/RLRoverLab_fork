@@ -80,7 +80,7 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
    #  slip_factor: float = MISSING
    #  """Slip factor for wheels and terrain"""
 
-    drive_order = ["FL", "RL", "FR", "RR"] # Leo_Rover
+    drive_order = ["FL", "FR", "RL", "RR"] # Leo_Rover
     """Name of the drive joints in the above order"""
 
 ACTION_CONFIGS = {

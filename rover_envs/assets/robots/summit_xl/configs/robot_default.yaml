@@ -16,9 +16,9 @@ joints:
     base_drive:
     {
       joint_names_expr: [".*Drive_Joint"],
-      velocity_limit: 6,
-      effort_limit: 12,
-      stiffness: 5.0,
+      velocity_limit: 10,
+      effort_limit: 100,
+      stiffness: 2.0,
       damping: 25.0
     },
 #    passive_joints:
@@ -37,7 +37,7 @@ collision_properties:
   }
 rigidBody_properties:
   {
-    max_linear_velocity: 6,
+    max_linear_velocity: 3,
     max_angular_velocity: 60.0,
     max_depenetration_velocity: 1.0,
     disable_gravity: false,
