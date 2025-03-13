@@ -82,3 +82,9 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
 
     drive_order = ["FL_Drive", "RL_Drive", "FR_Drive", "RR_Drive"]
     """Name of the drive joints in the above order"""
+
+ACTION_CONFIGS = {
+    "ackermann": AckermannActionCfg,
+    "skidsteer": SkidSteeringSimpleCfg,
+    "diffdrive": SkidSteeringSimpleCfg
+}
