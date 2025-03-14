@@ -115,8 +115,8 @@ def log_setup(experiment_cfg, env_cfg, agent):
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), experiment_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), experiment_cfg)
+    # dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
+    # dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), experiment_cfg)
     return log_dir
 
 
@@ -125,7 +125,7 @@ from skrl.trainers.torch import SequentialTrainer  # noqa: E402
 from skrl.utils import set_seed  # noqa: E402, F401
 
 import rover_envs  # noqa: E402
-import rover_envs.envs.navigation.robots  # noqa: E402, F401
+import rover_envs.assets.robots  # noqa: E402, F401
 # Import agents
 from rover_envs.envs.navigation.learning.skrl import get_agent  # noqa: E402
 from rover_envs.utils.config import parse_skrl_cfg  # noqa: E402

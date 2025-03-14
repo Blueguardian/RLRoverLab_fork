@@ -188,7 +188,7 @@ class GymEnvRegistrar:
                 continue
 
             #Extract allowed RL algorithms
-            algorithms = learning_config.get("allowed_algorithms", ["PPO"])
+            algorithms = learning_config.get("algorithms", ["PPO"])
 
             #Generate paths for SKRL agent configs
             skrl_configs = {
@@ -213,8 +213,9 @@ class GymEnvRegistrar:
                 disable_env_checker=True,
                 kwargs={
                     "env_cfg_entry_point": env_config_class,
-                    "best_model_path": str(env_folder / "policies/best_agent.pt"),
+                    "best_model_path": Path(env_folder, "policies/best_agent.pt").absolute().as_posix(),
                     "get_agent_fn": get_agent,
                     "skrl_cfgs": skrl_configs,
                 },
             )
+

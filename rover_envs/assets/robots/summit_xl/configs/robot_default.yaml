@@ -5,7 +5,7 @@ controller_config: skidsteer,
 controller:
   {
     asset_name: robot,
-    scale: [1.0, 1.0],
+    scale: [10.0, 2.0],
     offset: [0.0, 0.0],
     track_width: 0.470,
     wheel_radius: 0.1175,
@@ -19,7 +19,7 @@ joints:
       velocity_limit: 10,
       effort_limit: 100,
       stiffness: 2.0,
-      damping: 25.0
+      damping: 20.0
     },
 #    passive_joints:
 #    {
