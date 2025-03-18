@@ -122,7 +122,7 @@ class configGen:
         }
     def _action_cfg(self, params):
         """Selects and instantiates the action controller"""
-        action_type = str(params.get("action_type")).lower()
+        action_type = str(params.get("controller_config"))[:-1]
         ActionConfigClass = ACTION_CONFIGS.get(action_type, SkidSteeringSimpleCfg)
         action_params = inspect.signature(ActionConfigClass).parameters
         filtered_params = {
@@ -171,7 +171,7 @@ class configGen:
                 "__post_init__": post_init_gen(robot_cfg, self._articulation_cfg(robot_cfg), self._action_cfg(robot_cfg))
             }
 
-            # Create the class
+            # Create the class: TODO: remove __class__
             cls = type(class_name, (self.parent_class, self.__class__), attributes)
             cls = configclass(cls)
             env_cfgs[class_name] = cls
@@ -241,4 +241,6 @@ class GymEnvRegistrar:
                     "skrl_cfgs": skrl_configs,
                 },
             )
+
+            print(f"\t[Registered: {env_id} for {env_folder.name} with {algorithms}]")
 

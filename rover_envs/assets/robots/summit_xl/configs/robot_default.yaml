@@ -62,8 +62,8 @@ controller_config: skidsteer,               # Control type, options: ackermann, 
 controller:
   {
     asset_name: robot,
-    scale: [1.0, 1.0],                  # Default: [1.0, 1.0]
-    offset: [0.0, 0.0],                 # Default: [0.0, 0.0]
+    scale: [6.0, 6.0],                  # Default: [1.0, 1.0]
+    offset: 0.0,                        # Default: 0.0
     track_width: 0.470,                 # [meters] Distance between left & right wheels
     wheel_radius: 0.1175,               # [meters] Wheel radius
     drive_joint_names: [".*Drive_Joint"]# Names of wheel joints (regex supported)

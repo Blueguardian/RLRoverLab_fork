@@ -3,7 +3,7 @@
 # Configuration file for robot parameters.
 
 name: AAUMarsRover,                           # Will be used in future update
-robot_model_path: /aau_rover/mars_rover.usd,  # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
+robot_model_path: /aau_rover/Mars_Rover.usd,  # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
 controller_config: ackermann,                 # Control type, options: ackermann, skidsteer or diffdrive
 
 # ───────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ controller:
      min_steering_radius: 0.8,                          # [meters] Minimum turning radius
      steering_joint_names: [".*Steer_Revolute"],        # Steering joints (regex supported)
      drive_joint_names: [".*Drive_Continuous"],         # Drive joints (regex supported)
-     offset: [-0.0135, -0.0135],                        # Default: [1.0, 1.0]
+     offset: 0.0135,                                    # Default: 0.0
      scale: [1.0, 1.0],                                 # Default: [0.0, 0.0]
      steering_order: ["FL", "FR", "RL", "RR"],          # Steering joint order
      drive_order: ["FL", "FR", "CL", "CR", "RL", "RR"], # Drive joint order]
