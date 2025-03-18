@@ -1,12 +1,11 @@
 ---
-name: summit,
-robot_model_path: ../summit_xl.usd,
-articulation_type: RoverArticulation,
+name: roburoc,
+robot_model_path: /roburoc_simple/roburoc.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
 controller_config: skidsteer,
 controller:
   {
-    scale: (1.0, 1.0),
-    offset: (0.0, 0.0),
+    scale: [1.0, 1.0],
+    offset: [0.0, 0.0],
     track_width: 0.470,
     wheel_radius: 0.1175,
     drive_joint_names: [".*Drive_Joint"]

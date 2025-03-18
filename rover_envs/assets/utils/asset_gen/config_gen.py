@@ -19,7 +19,7 @@ yaml = ruamel.yaml.YAML(typ="safe")
 # Global dict to store configs
 CONFIG_CLASSES = {}
 
-def post_init_factory(robot_config, articulation_cfg, action_cfg):
+def post_init_gen(robot_config, articulation_cfg, action_cfg):
     """Factory function that generates a `__post_init__` method for dynamic classes."""
     def __post_init__(self):
         super(self.__class__, self).__post_init__()  # ✅ This now works correctly
@@ -28,7 +28,7 @@ def post_init_factory(robot_config, articulation_cfg, action_cfg):
 
     return __post_init__
 
-class ConfigFactory:
+class configGen:
     """ Dynamically allocate and initialize configuration classes for
         each new asset. Assets needs to have config files in a "configs"
         folder.
@@ -39,35 +39,57 @@ class ConfigFactory:
         """
 
     def __init__(self, root_folder: Path, base_class):
+
+        # The target folder (asset/robots) -> Could be hard-coded
         self.root_folder = root_folder
+
+        # The class which each class should inherit from -> Could be hard-coded
         self.parent_class = configclass(base_class)
-        print("Generating asset configurations...")
+        print("Generating asset configurations...") # Just info prompt
+
+        # Generate classes
         self.config_classes = self._generate_cfgs()
 
 
     def _load_yaml(self, file_path: Path):
-        """Loads yaml files"""
+        """ Loads yaml files
+            Used mainly for opening
+        """
         if not file_path.exists():
             raise FileNotFoundError(f"Missing configuration file: {file_path}")
         with open(file_path, "r") as f:
             return yaml.load(f)
 
     def _class_name(self, folder: Path, params: dict):
-        """Generate class name based on folder name or from config"""
+        """ Generate class name based on folder name or from config
+            Allows a definition of a custom class name if specified in config
+
+            Not added to config as standard
+            """
         folder = folder.name
+        # Either use the config or use the folder name
         return params.get("class_config", {}).get("config_name") or \
                "".join(word.capitalize() for word in folder.replace("-", "_").split("_")) + "EnvCfg"
 
     def _nestedDict(self, cfg_class, cfg_dict):
-        """Handles nested dicts in config file"""
+        """ Handles nested dicts in config file
+
+            Due to the setup of the configuration file
+            it is required to handle nested dicts
+            could perhaps be changed depending on the setup
+            of the config file"""
         if not cfg_dict:
             return None
+        # Check the parameters of the cfg class
         cfg_params = inspect.signature(cfg_class).parameters
+
+        # Filter the inputs according to the required parameters and default values
         filtered_params = {
             param: cfg_dict.get(param,
                                    param_info.default if param_info.default is not inspect.Parameter.empty else None)
             for param, param_info in cfg_params.items()
         }
+        # Return the class with the given parameters
         return cfg_class(**filtered_params)
 
     def _joint_values(self, joint_cfg, key):
@@ -146,13 +168,14 @@ class ConfigFactory:
             # Define and register config class
             attributes = {
                 "__doc__": f"Configuration for {folder.name} rover environement.",
-                "__post_init__": post_init_factory(robot_cfg, self._articulation_cfg(robot_cfg), self._action_cfg(robot_cfg))
+                "__post_init__": post_init_gen(robot_cfg, self._articulation_cfg(robot_cfg), self._action_cfg(robot_cfg))
             }
 
             # Create the class
             cls = type(class_name, (self.parent_class, self.__class__), attributes)
             cls = configclass(cls)
             env_cfgs[class_name] = cls
+            print(f"\t[Generated {class_name} for {folder.name}]")
         return env_cfgs
 
     def get_cfgclasses(self):
@@ -163,7 +186,7 @@ class ConfigFactory:
 class GymEnvRegistrar:
     """Dynamically registers Gym environments based on `ConfigFactory` outputs and per asset configuration."""
 
-    def __init__(self, config_factory: ConfigFactory):
+    def __init__(self, config_factory: configGen):
         self.config_factory = config_factory  # Use the generated config classes
         self.base_dir = Path(__file__).parent
         print("Registering gym environments...")

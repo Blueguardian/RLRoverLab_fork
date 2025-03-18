@@ -1,16 +1,106 @@
 ---
-name: summit,
-robot_model_path: /summit_xl/summit_xl.usd,
-controller_config: skidsteer,
+# ===============================================================
+# Configuration file for robot parameters.
+# ===============================================================
+name: summit,                               # Will be used in future update
+robot_model_path: /summit_xl/summit_xl.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
+controller_config: skidsteer,               # Control type, options: ackermann, skidsteer or diffdrive
+
+# ───────────────────────────────────────────────────────────────
+# Controller Parameters Configuration
+# Depending on the selected controller type (action_cfg),
+# different parameters are required.
+# ───────────────────────────────────────────────────────────────
+
+# ── Skid-Steering / Differential Drive Parameters ───────────
+# These parameters are used for skid-steering and differential drive vehicles.
+#
+# - scale: Scaling factor for the control inputs. Default: [1.0, 1.0]
+# - offset: Offset applied to the control inputs. Default: [0.0, 0.0]
+# - track_width: Distance between the left and right wheels [meters].
+# - wheel_radius: Radius of the wheels [meters].
+# - drive_joint_names: Names of the wheel joints (can be regex or individual).
+# - drive_order: # Ordering of drive joints, should match prim names/prefixes
+#
+# Example:
+# scale: [1.0, 1.0]          # Default: [1.0, 1.0]
+# offset: [0.0, 0.0]         # Default: [0.0, 0.0]
+# track_width: 1.0           # [meters] Distance between left & right wheels
+# wheel_radius: 1.0          # [meters] Wheel radius
+# drive_joint_names: [".*Drive_Joint"] # Names of wheel joints (regex supported)
+
+# ── Ackermann Steering Parameters ───────────────────────────
+# These parameters are used for Ackermann-style steering vehicles.
+#
+
+# - wheelbase_length: Distance between front and rear wheels [meters].
+# - middle_wheel_distance: Distance between middle wheels [meters].
+# - rear_and_front_wheel_distance: Distance between the rear and front wheels [meters].
+# - wheel_radius: Radius of the wheels [meters].
+# - min_steering_radius: Minimum turning radius of the vehicle [meters].
+#   If lower than this value, the vehicle will turn on the spot.
+# - steering_joint_names: Names of the steering joints (regex or individual).
+# - drive_joint_names: Names of wheel joints (regex or individual).
+# - scale: Scaling factor for the control inputs. Default: [1.0, 1.0]
+# - offset: Offset applied to the control inputs. Default: [0.0, 0.0]
+# - steering_order: Ordering of steering joints, should match prim names/prefixes.
+# - drive_order: Ordering of drive joints, should match prim names/prefixes.
+#
+# Example:
+# wheelbase_length: 1.0,                       # [meters] Distance between front & rear wheels
+# middle_wheel_distance: 1.0,                  # [meters] Distance between middle wheels
+# rear_and_front_wheel_distance: 1.0,          # [meters] Distance between front & rear wheels
+# wheel_radius: 1.0,                           # [meters] Wheel radius
+# min_steering_radius: 1.0,                    # [meters] Minimum turning radius
+# steering_joint_names: [".*Steer_Joint"],     # Steering joints (regex supported)
+# drive_joint_names: [".*Drive_Joint"],        # Drive joints (regex supported)
+# offset: [0.0, 0.0],                  # Default: [1.0, 1.0]
+# scale: [1.0, 1.0],                           # Default: [0.0, 0.0]
+# steering_order: ["FL", "FR", "RL", "RR"],    # Steering joint order
+# drive_order: ["FL", "FR", "CL", "CR", "RL", "RR"], # Drive joint order]
+
 controller:
   {
     asset_name: robot,
-    scale: [1.0, 1.0],
-    offset: [0.0, 0.0],
-    track_width: 0.470,
-    wheel_radius: 0.1175,
-    drive_joint_names: [".*Drive_Joint"]
+    scale: [1.0, 1.0],                  # Default: [1.0, 1.0]
+    offset: [0.0, 0.0],                 # Default: [0.0, 0.0]
+    track_width: 0.470,                 # [meters] Distance between left & right wheels
+    wheel_radius: 0.1175,               # [meters] Wheel radius
+    drive_joint_names: [".*Drive_Joint"]# Names of wheel joints (regex supported)
   }
+
+# ── Joint setup ─────────────────────────────────────────────
+# Joint configuration setup
+# Depending on the types of joints on the rover model
+# this configuration can contain various types of joints
+# Ensure that it fits within the scope
+# ────────────────────────────────────────────────────────────
+
+# ── Skid-Steering / Differential Drive Parameters ───────────
+#
+# Usual parameters for skidsteering:
+# base_drive:
+#     {
+#      joint_names_expr: [".*Drive_Continuous"],
+#      velocity_limit: 6,
+#      effort_limit: 12,
+#      stiffness: 100.0,
+#      damping: 4000.0
+#     },
+# E.g. for Leo rover passive_joints should be added too
+#     passive_joints:
+#    {
+#      joint_names_expr: [".*Bogie_Joint"],
+#      velocity_limit: 6,
+#      effort_limit: 0,
+#      stiffness: 0.0,
+#      damping: 0.0,
+#    }
+#
+# ── Ackermann Steering Parameters ───────────────────────────
+#
+
+
 joints:
   {
     base_drive:
@@ -21,14 +111,6 @@ joints:
       stiffness: 2.0,
       damping: 25.0
     },
-#    passive_joints:
-#    {
-#      joint_names_expr: [".*Bogie_Joint"],
-#      velocity_limit: 10,
-#      effort_limit: 0,
-#      stiffness: 0.0,
-#      damping: 0.0,
-#    }
   }
 collision_properties:
   {

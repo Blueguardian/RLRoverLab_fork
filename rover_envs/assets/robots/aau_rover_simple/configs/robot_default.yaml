@@ -1,30 +1,110 @@
 ---
-name: summit,
-robot_model_path: ../summit_xl.usd,
-articulation_type: RoverArticulation,
-controller_config: skidsteer,
+
+# Configuration file for robot parameters.
+
+name: AAUMarsRoverSimple, # Will be used in future update
+robot_model_path: /aau_rover_simple/rover_instance.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
+articulation_type: RoverArticulation, # Articulation type options: RoverArticulation
+controller_config: ackermann, # Control type, options: ackermann, skidsteer or diffdrive
+
+# ───────────────────────────────────────────────────────────────
+# Controller Parameters Configuration
+# Depending on the selected controller type (action_cfg),
+# different parameters are required.
+# ───────────────────────────────────────────────────────────────
+
+# ── Skid-Steering / Differential Drive Parameters ───────────
+# These parameters are used for skid-steering and differential drive vehicles.
+#
+# - scale: Scaling factor for the control inputs. Default: [1.0, 1.0]
+# - offset: Offset applied to the control inputs. Default: [0.0, 0.0]
+# - track_width: Distance between the left and right wheels [meters].
+# - wheel_radius: Radius of the wheels [meters].
+# - drive_joint_names: Names of the wheel joints (can be regex or individual).
+# - drive_order: # Ordering of drive joints, should match prim names/prefixes
+#
+# Example:
+# scale: [1.0, 1.0]          # Default: [1.0, 1.0]
+# offset: [0.0, 0.0]         # Default: [0.0, 0.0]
+# track_width: 1.0           # [meters] Distance between left & right wheels
+# wheel_radius: 1.0          # [meters] Wheel radius
+# drive_joint_names: [".*Drive_Joint"] # Names of wheel joints (regex supported)
+
+# ── Ackermann Steering Parameters ───────────────────────────
+# These parameters are used for Ackermann-style steering vehicles.
+#
+
+# - wheelbase_length: Distance between front and rear wheels [meters].
+# - middle_wheel_distance: Distance between middle wheels [meters].
+# - rear_and_front_wheel_distance: Distance between the rear and front wheels [meters].
+# - wheel_radius: Radius of the wheels [meters].
+# - min_steering_radius: Minimum turning radius of the vehicle [meters].
+#   If lower than this value, the vehicle will turn on the spot.
+# - steering_joint_names: Names of the steering joints (regex or individual).
+# - drive_joint_names: Names of wheel joints (regex or individual).
+# - scale: Scaling factor for the control inputs. Default: [1.0, 1.0]
+# - offset: Offset applied to the control inputs. Default: [0.0, 0.0]
+# - steering_order: Ordering of steering joints, should match prim names/prefixes.
+# - drive_order: Ordering of drive joints, should match prim names/prefixes.
+#
+# Example:
+# wheelbase_length: 1.0,                       # [meters] Distance between front & rear wheels
+# middle_wheel_distance: 1.0,                  # [meters] Distance between middle wheels
+# rear_and_front_wheel_distance: 1.0,          # [meters] Distance between front & rear wheels
+# wheel_radius: 1.0,                           # [meters] Wheel radius
+# min_steering_radius: 1.0,                    # [meters] Minimum turning radius
+# steering_joint_names: [".*Steer_Joint"],     # Steering joints (regex supported)
+# drive_joint_names: [".*Drive_Joint"],        # Drive joints (regex supported)
+# offset: [0.0, 0.0],                  # Default: [1.0, 1.0]
+# scale: [1.0, 1.0],                           # Default: [0.0, 0.0]
+# steering_order: ["FL", "FR", "RL", "RR"],    # Steering joint order
+# drive_order: ["FL", "FR", "CL", "CR", "RL", "RR"], # Drive joint order]
 controller:
   {
-    scale: (1.0, 1.0),
-    offset: (0.0, 0.0),
-    track_width: 0.470,
-    wheel_radius: 0.1175,
-    drive_joint_names: [".*Drive_Joint"]
+     wheelbase_length: 0.849,                     # [meters] Distance between front & rear wheels
+     middle_wheel_distance: 0.849,                # [meters] Distance between middle wheels
+     rear_and_front_wheel_distance: 0.77,         # [meters] Distance between front & rear wheels
+     wheel_radius: 0.1,                           # [meters] Wheel radius
+     min_steering_radius: 0.8,                    # [meters] Minimum turning radius
+     steering_joint_names: [".*Steer_Revolute"],  # Steering joints (regex supported)
+     drive_joint_names: [".*Drive_Continuous"],   # Drive joints (regex supported)
+     offset: [-0.0135, -0.0135],                  # Default: [1.0, 1.0]
+     scale: [1.0, 1.0],                           # Default: [0.0, 0.0]
+     steering_order: ["FL", "FR", "RL", "RR"],    # Steering joint order
+     drive_order: ["FL", "FR", "CL", "CR", "RL", "RR"], # Drive joint order]
   }
+
+# ── Joint setup ─────────────────────────────────────────────
+# There can be a multitude of different joints
+# involved in steering the robot, these have individual
+# parameters, which needs to be setup, examples are here
+# provided
+# ────────────────────────────────────────────────────────────
+
+# ── Skid-Steering / Differential Drive Parameters ───────────
+
 joints:
   {
     base_drive:
     {
-      joint_names_expr: [".*Drive_Joint"],
+      joint_names_expr: [".*Drive_Continuous"],
       velocity_limit: 6,
       effort_limit: 12,
       stiffness: 100.0,
       damping: 4000.0
     },
+    base_steering:
+    {
+      joint_names_expr: [".*Steer_Revolute"],
+      velocity_limit: 6,
+      effort_limit: 12,
+      stiffness: 8000.0,
+      damping: 1000.0,
+    },
     passive_joints:
     {
-      joint_names_expr: [".*Bogie_Joint"],
-      velocity_limit: 10,
+      joint_names_expr: [".*(Rocker|Differential)_Revolute"],
+      velocity_limit: 6,
       effort_limit: 0,
       stiffness: 0.0,
       damping: 0.0,
@@ -37,9 +117,9 @@ collision_properties:
   }
 rigidBody_properties:
   {
-    max_linear_velocity: 3,
-    max_angular_velocity: 60.0,
-    max_depenetration_velocity: 1.0,
+    max_linear_velocity: 1.5,
+    max_angular_velocity: 4.0,
+    max_depenetration_velocity: 0.5,
     disable_gravity: false,
   }
 simulation_properties:
@@ -60,7 +140,7 @@ pose_config:
       },
       velocity_config:
       {
-        names: [".*Steer_Revolute", ".*Drive_Continous"],
+        names: [".*Steer_Revolute", ".*Drive_Continuous"],
         values: [0.0, 0.0]
       }
     }
