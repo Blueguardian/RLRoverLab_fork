@@ -1,2 +1,3 @@
 ---
-algorithms: [PPO]
+algorithms: [PPO],
+task_name: "summit_xl"

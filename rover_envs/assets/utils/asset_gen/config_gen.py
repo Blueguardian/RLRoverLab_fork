@@ -227,7 +227,7 @@ class GymEnvRegistrar:
                 continue
 
             #Generate Gym ID based on folder name
-            env_id = f"{env_folder.name}-v0"
+            env_id = learning_config.get("task_name")+"-v0" if "task_name" in learning_config else f"{env_folder.name}-v0"
 
             #Register the environment in Gym
             gym.register(

@@ -1,2 +1,3 @@
 ---
-algorithms: [PPO, RPO, SAC, TD3, TRPO]
+algorithms: [PPO, RPO, SAC, TD3, TRPO],
+task_name: "AAUMarsRover"
