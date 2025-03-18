@@ -125,7 +125,7 @@ from skrl.trainers.torch import SequentialTrainer  # noqa: E402
 from skrl.utils import set_seed  # noqa: E402, F401
 
 import rover_envs  # noqa: E402
-import rover_envs.envs.navigation.robots  # noqa: E402, F401
+import rover_envs.assets.robots  # noqa: E402, F401
 # Import agents
 from rover_envs.envs.navigation.learning.skrl import get_agent  # noqa: E402
 from rover_envs.utils.config import parse_skrl_cfg  # noqa: E402

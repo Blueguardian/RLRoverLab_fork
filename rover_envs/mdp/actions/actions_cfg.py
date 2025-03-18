@@ -60,7 +60,7 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
     class_type: type[ActionTerm] = skidsteer_actions.SkidSteerAction
     """The specific action class type for Skid-Steering"""
 
-    scale: tuple[float, float] = (1.5, 1.0)
+    scale: tuple[float, float] = (1.0, 1.0)
     """The scale of the action term"""
 
     offset: tuple[float, float] = 0.0
