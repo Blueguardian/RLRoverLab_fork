@@ -69,7 +69,14 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
 
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
+    names = env.unwrapped.observation_manager._group_obs_term_names["policy"]
+    shapes = env.unwrapped.observation_manager._group_obs_term_dim["policy"]
+    term_shape_map = dict(zip(names, shapes))
+
+
+    encoder_input_shape = term_shape_map['camera_rgb']
+    channels = encoder_input_shape[2] if encoder_input_shape[2] in [1, 3] else 1
+    input_shape = (channels, encoder_input_shape[0], encoder_input_shape[1])
 
     mlp_input_size = 5
 
@@ -80,7 +87,7 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
         mlp_input_size=mlp_input_size,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
+        encoder_input_size=input_shape,
         encoder_layers=[8, 16, 32, 64],
         encoder_activation="leaky_relu",
     )
@@ -91,7 +98,7 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
         mlp_input_size=mlp_input_size,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
+        encoder_input_size=input_shape,
         encoder_layers=[8, 16, 32, 64],
         encoder_activation="leaky_relu",
     )

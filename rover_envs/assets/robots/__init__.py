@@ -1,5 +1,5 @@
 from rover_envs.assets.utils.asset_gen.config_gen import configGen, GymEnvRegistrar
-from rover_envs.assets.utils.env_gen.env_gen import RoverEnvCfg
+from rover_envs.envs.navigation.entrypoints.rover_env import RoverEnvCfg
 from pathlib import Path
 
 # Assets/robots folder

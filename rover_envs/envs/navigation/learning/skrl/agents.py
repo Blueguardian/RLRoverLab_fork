@@ -1,4 +1,5 @@
 from gymnasium.spaces.box import Box
+from gymnasium.spaces.dict import Dict
 from isaaclab.envs import ManagerBasedRLEnv
 from skrl.agents.torch.ppo import PPO, PPO_DEFAULT_CONFIG
 from skrl.agents.torch.rpo import RPO, RPO_DEFAULT_CONFIG
@@ -11,7 +12,7 @@ from rover_envs.envs.navigation.learning.skrl.configure_models import get_models
 from rover_envs.utils.config import convert_skrl_cfg
 
 
-def PPO_agent(experiment_cfg, observation_space: Box, action_space: Box, env: ManagerBasedRLEnv, conv):
+def PPO_agent(experiment_cfg, observation_space: Box|Dict, action_space: Box, env: ManagerBasedRLEnv, conv):
 
     # Define memory size
     memory_size = experiment_cfg["agent"]["rollouts"]

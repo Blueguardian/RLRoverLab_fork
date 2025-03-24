@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import torch
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.sensors import RayCaster
+from isaaclab.sensors import RayCaster, Camera, CameraCfg
 
 # from isaaclab.command_generators import UniformPoseCommandGenerator
 
@@ -32,17 +32,17 @@ def distance_to_target_euclidean(env: ManagerBasedRLEnv, command_name: str):
     return distance.unsqueeze(-1)
 
 
-def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Calculate the height scan of the rover.
-
-    This function uses a ray caster to generate a height scan of the rover's surroundings.
-    The height scan is normalized by the maximum range of the ray caster.
-    """
-    # extract the used quantities (to enable type-hinting)
-    sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
-    # height scan: height = sensor_height - hit_point_z - 0.26878
-    # Note: 0.26878 is the distance between the sensor and the rover's base
-    return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
+# def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+#     """Calculate the height scan of the rover.
+#
+#     This function uses a ray caster to generate a height scan of the rover's surroundings.
+#     The height scan is normalized by the maximum range of the ray caster.
+#     """
+#     # extract the used quantities (to enable type-hinting)
+#     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+#     # height scan: height = sensor_height - hit_point_z - 0.26878
+#     # Note: 0.26878 is the distance between the sensor and the rover's base
+#     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
 
 
 def angle_diff(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
@@ -51,3 +51,22 @@ def angle_diff(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     heading_angle_diff = env.command_manager.get_command(command_name)[:, 3]
 
     return heading_angle_diff.unsqueeze(-1)
+
+def image(env, sensor_cfg, data_type):
+    sensor = env.scene.sensors.get(sensor_cfg.name)
+    output = sensor.data.output.get(data_type)
+
+    if isinstance(output, torch.Tensor):
+        # Normalize RGB images to [0, 1] and convert to float32
+        if data_type == "rgb" and output.dtype == torch.uint8:
+            output = output.float() / 255.0
+        return output
+
+    try:
+        output = torch.from_numpy(output)
+        if data_type == "rgb" and output.dtype == torch.uint8:
+            output = output.float() / 255.0
+        return output
+    except Exception as e:
+        print(f"[ERROR] Failed to convert output to torch tensor: {e}")
+        return torch.zeros((3, 240, 320), dtype=torch.float32)

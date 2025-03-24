@@ -37,7 +37,6 @@ class RoverEnv(ManagerBasedRLEnv):
             idx (torch.Tensor): Indices of the environments to reset.
         """
         super()._reset_idx(idx)
-
         # Done this way because SKRL requires the "episode" key in the extras dict to be present in order to log.
         self.extras["episode"] = self.extras["log"]
 
