@@ -62,12 +62,12 @@ controller_config: skidsteer,               # Control type, options: ackermann, 
 controller:
   {
     asset_name: robot,
-    scale: [2.0, 2.0],                  # Default: [1.0, 1.0]
+    scale: [3.0, 3.0],                  # Default: [1.0, 1.0]
     offset: 0.0,                        # Default: 0.0
     track_width: 0.690,                 # [meters] Distance between left & right wheels
     wheel_radius: 0.290,                # [meters] Wheel radius
     drive_joint_names: [".*Drive_Joint"],# Names of wheel joints (regex supported)
-    drive_order: ["FL", "FR", "RL", "RR"],
+    # drive_order: ["FL", "FR", "RL", "RR"],
   }
 
 # ── Joint setup ─────────────────────────────────────────────
@@ -108,9 +108,10 @@ joints:
     {
       joint_names_expr: [".*Drive_Joint"],
       velocity_limit: 10,
-      effort_limit: 10000,
+      # effort_limit: 1000,
       stiffness: 0.0,
-      damping: 25.0
+      damping: 20.0,
+      # friction: 0.0,
     },
   }
 
@@ -121,12 +122,12 @@ joints:
 
 collision_properties: # Properties related to collision with the robot
   {
-    contact_offset: 0.05,                       # [meters] Offset considered contact with other object
+    contact_offset: 0.04,                       # [meters] Offset considered contact with other object
     rest_offset: 0.01                           # [meters] Offset considered rest at contact with object
   }
 rigidBody_properties: # Properties of the rigid body
   {
-    max_linear_velocity: 2.0,                   # [m/s]
+    max_linear_velocity: 6.0,                   # [m/s]
     max_angular_velocity: 60.0,                  # [rad/s]
     max_depenetration_velocity: 1.0,            # [m/s] makes collision response slower
     disable_gravity: False,                     # [Bool] whether to disable gravity for the body
@@ -151,7 +152,7 @@ pose_config:
       velocity_config: # Velocity
       {
         names: [".*Drive_Joint"], # Names of joints
-        values: [0.0, 0.0]                      # and their initial velocities
+        values: [0.0, 0.0, 0.0, 0.0]        # and their initial velocities
       }
     }
   }

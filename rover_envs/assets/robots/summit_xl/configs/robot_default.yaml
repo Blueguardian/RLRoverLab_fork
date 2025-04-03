@@ -108,7 +108,7 @@ joints:
       joint_names_expr: [".*Drive_Joint"],
       velocity_limit: 10,
       effort_limit: 100,
-      stiffness: 2.0,
+      stiffness: 10.0,
       damping: 25.0
     },
   }

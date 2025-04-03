@@ -111,15 +111,19 @@ class configGen:
     def _actuators(self, params):
         """Extracts actuator configurations"""
         return {
-            actuator: ImplicitActuatorCfg(
-                joint_names_expr=actuator_data["joint_names_expr"],
-                velocity_limit=actuator_data["velocity_limit"],
-                effort_limit=actuator_data["effort_limit"],
-                stiffness=actuator_data["stiffness"],
-                damping=actuator_data["damping"],
-            )
+            actuator: ImplicitActuatorCfg(**actuator_data)
             for actuator, actuator_data in params.get("joints", {}).items()
         }
+        # return {
+        #     actuator: ImplicitActuatorCfg(
+        #         joint_names_expr=actuator_data["joint_names_expr"],
+        #         velocity_limit=actuator_data["velocity_limit"],
+        #         effort_limit=actuator_data["effort_limit"],
+        #         stiffness=actuator_data["stiffness"],
+        #         damping=actuator_data["damping"],
+        #     )
+        #     for actuator, actuator_data in params.get("joints", {}).items()
+        # }
     def _action_cfg(self, params):
         """Selects and instantiates the action controller"""
         action_type = str(params.get("controller_config"))[:-1]

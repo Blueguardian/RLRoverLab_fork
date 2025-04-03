@@ -3,7 +3,7 @@
 # Configuration file for robot parameters.
 # ===============================================================
 name: roburoc_simple,                               # Will be used in future update
-robot_model_path: /RobuROC4_Simple/RobuROC4.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
+robot_model_path: /RobuROC4_Simple/RobuROC4_Simple.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
 controller_config: skidsteer,               # Control type, options: ackermann, skidsteer or diffdrive
 
 # ───────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ controller_config: skidsteer,               # Control type, options: ackermann, 
 controller:
   {
     asset_name: robot,
-    scale: [6.0, 6.0],                  # Default: [1.0, 1.0]
+    scale: [3.0, 3.0],                  # Default: [1.0, 1.0]
     offset: 0.0,                        # Default: 0.0
     track_width: 0.690,                 # [meters] Distance between left & right wheels
     wheel_radius: 0.290,                # [meters] Wheel radius
@@ -108,9 +108,9 @@ joints:
     {
       joint_names_expr: [".*Drive_Joint"],
       velocity_limit: 10,
-      effort_limit: 10000,
-      stiffness: 2.0,
-      damping: 25.0
+      effort_limit: 1000,
+      stiffness: 0.0,
+      damping: 10.0
     },
   }
 
