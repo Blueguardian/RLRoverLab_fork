@@ -4,6 +4,7 @@ import inspect # noqa: F401
 import gymnasium as gym
 import ruamel.yaml # noqa: F401
 from pathlib import Path # noqa: F401
+from prettytable import PrettyTable
 
 from isaaclab.utils import configclass
 import isaaclab.sim as sim_utils
@@ -47,8 +48,19 @@ class configGen:
         self.parent_class = configclass(base_class)
         print("Generating asset configurations...") # Just info prompt
 
+        # Setup for printing tables
+        self._table = PrettyTable()
+        self._table.field_names = ["Config Class", "Asset Folder"]
+        self._table.align = "l"
+
         # Generate classes
         self.config_classes = self._generate_cfgs()
+
+        # Finalize by printing the configs
+        print("\n+------------------------------+")
+        print("|     Generated Configs        |")
+        print("+------------------------------+")
+        print(self._table)
 
 
     def _load_yaml(self, file_path: Path):
@@ -111,13 +123,7 @@ class configGen:
     def _actuators(self, params):
         """Extracts actuator configurations"""
         return {
-            actuator: ImplicitActuatorCfg(
-                joint_names_expr=actuator_data["joint_names_expr"],
-                velocity_limit=actuator_data["velocity_limit"],
-                effort_limit=actuator_data["effort_limit"],
-                stiffness=actuator_data["stiffness"],
-                damping=actuator_data["damping"],
-            )
+            actuator: ImplicitActuatorCfg(**actuator_data)
             for actuator, actuator_data in params.get("joints", {}).items()
         }
     def _action_cfg(self, params):
@@ -175,7 +181,9 @@ class configGen:
             cls = type(class_name, (self.parent_class, self.__class__), attributes)
             cls = configclass(cls)
             env_cfgs[class_name] = cls
-            print(f"\t[Generated {class_name} for {folder.name}]")
+
+            #Testing
+            self._table.add_row([class_name, folder.name])
         return env_cfgs
 
     def get_cfgclasses(self):
@@ -190,7 +198,17 @@ class GymEnvRegistrar:
         self.config_factory = config_factory  # Use the generated config classes
         self.base_dir = Path(__file__).parent
         print("Registering gym environments...")
+
+        self._table = PrettyTable()
+        self._table.field_names = ["Gym ID", "Asset Folder", "Algorithms"]
+        self._table.align = "l"
+
         self.register_envs()
+
+        print("\n+------------------------------+")
+        print("|     Registered Environments  |")
+        print("+------------------------------+")
+        print(self._table)
 
     def _load_yaml(self, file_path: Path):
         """Loads a YAML configuration file"""
@@ -227,7 +245,8 @@ class GymEnvRegistrar:
                 continue
 
             #Generate Gym ID based on folder name
-            env_id = f"{env_folder.name}-v0"
+            # env_id = learning_config.get("task_name", f"{env_folder.name}")[:-1] + "-v0"
+            env_id = f"{env_folder.name}-v0" if not "task_name" in learning_config else learning_config.get("task_name")+"-v0"
 
             #Register the environment in Gym
             gym.register(
@@ -241,6 +260,5 @@ class GymEnvRegistrar:
                     "skrl_cfgs": skrl_configs,
                 },
             )
-
-            print(f"\t[Registered: {env_id} for {env_folder.name} with {algorithms}]")
+            self._table.add_row([env_id, env_folder.name, ", ".join(algorithms)])
 
