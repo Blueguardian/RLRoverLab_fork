@@ -192,7 +192,36 @@ class configGen:
 
 
 class GymEnvRegistrar:
-    """Dynamically registers Gym environments based on `ConfigFactory` outputs and per asset configuration."""
+    """
+    Dynamically registers Gymnasium-compatible environments based on available robot asset configurations.
+
+    This class parses YAML configuration files inside each asset's `configs/` folder, extracts
+    relevant training and task parameters (such as RL algorithms, task name, and agent configuration paths),
+    and registers the environment with the `gymnasium` registry using a unique `env_id`.
+
+    The configuration classes required for each environment are dynamically created using
+    `configGen`, which must be passed in as a dependency.
+
+    Each registered environment becomes accessible through standard Gym APIs,
+    and includes metadata such as:
+        - A custom configuration class for the simulation setup
+        - Best policy model path
+        - Agent setup function (`get_agent`)
+        - Configuration paths for supported algorithms
+
+    Example Gym ID: "aau_rover-v0"
+
+    Output:
+        - A formatted table summarizing the registered environments, printed to the console.
+
+    Args:
+        config_factory (configGen): Instance that provides dynamically generated environment config classes.
+
+    Attributes:
+        config_factory (configGen): Source of environment configuration classes.
+        base_dir (Path): Base path of the file for relative path resolution.
+        _table (PrettyTable): Table for summarizing environment registration status.
+    """
 
     def __init__(self, config_factory: configGen):
         self.config_factory = config_factory  # Use the generated config classes
@@ -218,7 +247,17 @@ class GymEnvRegistrar:
             return yaml.load(stream)
 
     def register_envs(self):
-        """Registers Gym environments based on per asset configurations."""
+        """
+    Iterates through all asset folders and registers corresponding Gym environments.
+
+    - Loads each environment's training configuration from `training_default.yaml`.
+    - Extracts the list of supported RL algorithms.
+    - Constructs paths to the SKRL agent configs.
+    - Matches the config class by generating a name from the folder structure.
+    - Registers the environment with `gymnasium`.
+
+    If no configuration or config class is found, the environment is skipped.
+    """
         for env_folder in self.config_factory.root_folder.iterdir():
             if not env_folder.is_dir():
                 continue
@@ -244,8 +283,7 @@ class GymEnvRegistrar:
             if not env_config_class:
                 continue
 
-            #Generate Gym ID based on folder name
-            # env_id = learning_config.get("task_name", f"{env_folder.name}")[:-1] + "-v0"
+            # Generate Gym ID based on folder name or config definition
             env_id = f"{env_folder.name}-v0" if not "task_name" in learning_config else learning_config.get("task_name")+"-v0"
 
             #Register the environment in Gym

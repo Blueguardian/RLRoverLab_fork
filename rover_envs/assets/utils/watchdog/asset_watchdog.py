@@ -6,9 +6,35 @@ import time, os, shutil
 
 class FileSystemWatchdog(FileSystemEventHandler):
     """
-    Asset watchdog
-    Will, when the docker container is created and accessed watch asset/robots for new assets.
-    Should any assets exist that does not have configuration files then these will be provided
+    FileSystemWatchdog monitors the 'robots' asset directory and automatically injects default
+    configuration files into any newly created robot folders.
+
+    This is designed for use within a containerized simulation environment, where asset directories
+    (such as those representing individual rover models) may be added dynamically at runtime or
+    through host-system bindings (e.g. bind mounts in Docker).
+
+    Functionality:
+    - At startup, it iterates over all existing folders in `robots/`, and if a `configs/` subfolder
+      is missing, it copies in default YAML configurations from a central template directory.
+    - During runtime, it observes for newly created folders, and upon creation, does the same config
+      injection automatically.
+    - Ownership (UID/GID) of the copied files is preserved from the template source to avoid
+      permission issues inside the container.
+
+    Example watched structure:
+        rover_envs/
+        └── assets/
+            └── robots/
+                ├── aau_rover/
+                │   └── configs/  ← auto-created if missing
+                └── leo_rover/
+                    └── configs/
+
+    Attributes:
+        _CONFIGS_DIR (Path): Path to the default configuration templates.
+        paths_dir (Path): The base directory being monitored (i.e. assets/robots).
+        paths_dirs (list): Currently tracked robot folders.
+        observer (PollingObserver): Filesystem observer instance using polling backend.
     """
     _CONFIGS_DIR = Path(__file__).resolve().parents[0] / "configs"
 
@@ -34,6 +60,17 @@ class FileSystemWatchdog(FileSystemEventHandler):
         self.observer.start()
 
     def on_created(self, event):
+        """
+                Callback function triggered when a new directory is created in the observed path.
+
+                When a new robot asset folder is added, this method checks whether a `configs/` subfolder exists.
+                If not, it copies the default configuration templates from `_CONFIGS_DIR` into the new folder.
+                It also replicates the UID and GID from the template directory to the copied files to avoid
+                permission issues in Docker or remote environments.
+
+                Args:
+                    event (DirCreatedEvent): Filesystem event containing the path of the created directory.
+        """
         if not event.is_directory:
             return
 
@@ -52,7 +89,16 @@ class FileSystemWatchdog(FileSystemEventHandler):
         self.paths_dirs.append(event.src_path)
 
     def init_process_folders(self):
-        """Initial check of all folders for config files"""
+        """
+        Performs an initial scan of all existing robot asset folders inside the monitored directory.
+
+        For each folder:
+        - If a `configs/` subfolder is missing, the default configuration files are copied into place.
+        - Ownership is preserved by replicating the UID/GID from the template source.
+
+        This ensures that even robot assets added before the watchdog was started will receive
+        the required configuration structure.
+        """
         for folder in self.paths_dir.iterdir():
             if folder.is_dir() and folder.name not in {"__pycache__", ".vscode"}:
                 config_path = folder / "configs"
