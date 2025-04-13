@@ -85,7 +85,9 @@ services:
     volumes: *default-isaac-lab-volumes
     network_mode: host
     deploy: *default-isaac-lab-deploy
-    entrypoint: bash -c "${DOCKER_ISAAC_SIM_PATH}/python.sh -m pip install -e ${RLROVERLAB_PATH} && bash"
+    entrypoint: bash -c "${DOCKER_ISAAC_SIM_PATH}/python.sh -m pip install -e ${RLROVERLAB_PATH} && \
+      ${DOCKER_ISAAC_SIM_PATH}/python.sh rover_envs/assets/utils/watchdog/asset_watchdog.py & \
+      exec bash"
     stdin_open: true
     tty: true
 

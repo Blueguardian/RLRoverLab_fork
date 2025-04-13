@@ -111,19 +111,15 @@ class configGen:
     def _actuators(self, params):
         """Extracts actuator configurations"""
         return {
-            actuator: ImplicitActuatorCfg(**actuator_data)
+            actuator: ImplicitActuatorCfg(
+                joint_names_expr=actuator_data["joint_names_expr"],
+                velocity_limit=actuator_data["velocity_limit"],
+                effort_limit=actuator_data["effort_limit"],
+                stiffness=actuator_data["stiffness"],
+                damping=actuator_data["damping"],
+            )
             for actuator, actuator_data in params.get("joints", {}).items()
         }
-        # return {
-        #     actuator: ImplicitActuatorCfg(
-        #         joint_names_expr=actuator_data["joint_names_expr"],
-        #         velocity_limit=actuator_data["velocity_limit"],
-        #         effort_limit=actuator_data["effort_limit"],
-        #         stiffness=actuator_data["stiffness"],
-        #         damping=actuator_data["damping"],
-        #     )
-        #     for actuator, actuator_data in params.get("joints", {}).items()
-        # }
     def _action_cfg(self, params):
         """Selects and instantiates the action controller"""
         action_type = str(params.get("controller_config"))[:-1]
@@ -231,8 +227,7 @@ class GymEnvRegistrar:
                 continue
 
             #Generate Gym ID based on folder name
-            # env_id = learning_config.get("task_name", f"{env_folder.name}")[:-1] + "-v0"
-            env_id = f"{env_folder.name}-v0" if not "task_name" in learning_config else learning_config.get("task_name")+"-v0"
+            env_id = f"{env_folder.name}-v0"
 
             #Register the environment in Gym
             gym.register(

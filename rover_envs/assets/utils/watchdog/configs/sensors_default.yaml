@@ -1,0 +1,18 @@
+---
+sensors:
+  {
+    contact_sensors:
+      {
+        use: "True",
+        to_prims: [".*Body", ".*Drive_Joint"]
+      },
+    raycaster:
+      {
+        use: "True",
+        to_prim: "Body"
+      },
+    camera:
+      {
+      
+      }  
+  }

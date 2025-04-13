@@ -86,78 +86,7 @@ class SkidSteerAction(ActionTerm):
         # Publish wheel velocities
         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
 
-class SkidSteeringSimpleNonVec():
-    def __init__(self,
-        cfg:actions_cfg.SkidSteeringSimpleCfg,
-        robot: Articulation,
-        num_envs: int,
-        device: torch.device):
 
-        """ Initialize the SkidSteeringActionNonVec
-
-        Args:
-            cfg (actions_cfg.AckermannActionCfg): configuration for the ackermann action
-            robot (Articulation): robot asset
-            num_envs (int): number of environments
-            device (torch.device): device to run the operation on
-            """
-        # Initialize parameters
-        self.cfg = cfg
-        self.device = device
-        self.num_envs = num_envs
-
-        # Find the joint ids and names for the drive and steering joints
-        self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
-
-        # Remap joints to the order specified in the config.
-        drive_order = cfg.drive_order
-        # sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
-        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
-        original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)}
-        self._sorted_drive_ids = [self._drive_joint_ids[original_drive_id_positions[name]]
-                                  for name in sorted_drive_joint_names]
-        
-        carb.log_info(f" {self._drive_joint_ids} [{self._drive_joint_names}]")
-
-        # Create tensors for raw and processed actions
-        self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
-        self._processed_actions = torch.zeros_like(self.raw_actions)
-        self._joint_vel = torch.zeros(self.num_envs, len(self._drive_joint_ids), device=self.device)
-
-        # Save the scale and offset for the actions
-        self._scale = torch.tensor(self.cfg.scale, device=self.device).unsqueeze(0)
-        self._offset = torch.tensor(self.cfg.offset, device=self.device).unsqueeze(0)
-
-    
-
-
-    @property
-    def action_dim(self) -> int:
-        return 2  # Assuming a 2D action vector (linear velocity, angular velocity)
-
-    @property
-    def raw_actions(self) -> torch.Tensor:
-        return self._raw_actions
-
-    @property
-    def processed_actions(self) -> torch.Tensor:
-        return self._processed_actions
-    
-    """
-    Operations.
-    """
-
-    def process_actions(self, actions):
-        # Store the raw actions
-        self._raw_actions[:] = actions
-        self._processed_actions = self.raw_actions * self._scale + self._offset
-
-    def apply_actions(self):
-        # Apply the actions to the rover
-        self._joint_vel = skid_steer_simple(
-            self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device)
-
-        self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
 
 def skid_steer_simple(vx, omega, cfg, device):
     """Compute skid-steering wheel velocities."""
