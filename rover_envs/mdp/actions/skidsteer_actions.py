@@ -41,7 +41,8 @@ class SkidSteerAction(ActionTerm):
         sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
 
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)} # Origin positions for drive joints
-        self._sorted_drive_ids = {self._drive_joint_ids[original_drive_id_positions[name]] for name in sorted_drive_joint_names}
+        self._sorted_drive_ids = [self._drive_joint_ids[original_drive_id_positions[name]]
+                                  for name in sorted_drive_joint_names]
 
         # Define tensors for actions and joint velocities
         self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
@@ -83,7 +84,7 @@ class SkidSteerAction(ActionTerm):
         )
 
         # Publish wheel velocities
-        self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._drive_joint_ids)
+        self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
 
 class SkidSteeringSimpleNonVec():
     def __init__(self,
@@ -161,17 +162,19 @@ class SkidSteeringSimpleNonVec():
 def skid_steer_simple(vx, omega, cfg, device):
     """Compute skid-steering wheel velocities."""
     #
-    vx[:][:] = 0
-    omega[:][:] = 0
+    # vx[:][:] = 0
+    # omega[:][:] = -2
 
     # Instance configuration variables
     track_width = cfg.track_width  # Track width (m)
     wheel_r = cfg.wheel_radius  # Wheel radius (m)
 
+    lin_vel = torch.abs(vx)
+
     vel_left = vx - (omega * track_width / 2) / wheel_r *2
     vel_right = vx + (omega * track_width / 2) / wheel_r *2
 
     wheel_vel = torch.stack([vel_left, vel_right, vel_left, vel_right], dim=1)  # Order: FL, RL, FL, RR -> Leo rover
-    # wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1) # Order FL, FR, RL, RR -> Summit
+    #wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1) # Order FL, FR, RL, RR -> Summit
 
     return wheel_vel

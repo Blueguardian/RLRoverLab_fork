@@ -108,7 +108,7 @@ joints:
       joint_names_expr: [".*Drive_Joint"],
       velocity_limit: 10,
       effort_limit: 100,
-      stiffness: 10.0,
+      stiffness: 2.0,
       damping: 25.0
     },
   }
@@ -135,11 +135,6 @@ pose_config:
     init_pose: [0.0, 0.0, 0.0],
     joint_pose:
     {
-#      pose_config:
-#      {
-#        names: [".*Steer_Revolute"],
-#        values: [0.0]
-#      },
       velocity_config:
       {
         names: [".*Drive_Joint"],
