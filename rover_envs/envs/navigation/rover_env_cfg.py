@@ -94,8 +94,8 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
 
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
-        data_types=["rgb", "distance_to_camera"],
-        width=320, height=240,
+        data_types=["rgb"],
+        width=224, height=224,
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=0.193, focus_distance=100.0,
             horizontal_aperture=20.955, clipping_range=(0.1, 100.0)
@@ -146,10 +146,10 @@ class ObservationCfg:
             func=mdp.image,
             params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "rgb"}
         )
-        camera_depth = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "distance_to_camera"}
-        )
+        # camera_depth = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "distance_to_camera"}
+        # )
 
         def __post_init__(self):
             self.enable_corruption = True

@@ -1,0 +1,132 @@
+---
+# ═══════════════════════════════════════════════════════════════════════
+# TRAINING CONFIGURATION FILE
+# Defines how the agent is trained and which reward/termination/observation
+# terms are enabled, including parameters tied to those terms.
+# ═══════════════════════════════════════════════════════════════════════
+
+task_name: AAUMarsRover
+# Gym environment ID: auto-generated if not overridden
+
+algorithms: [PPO, SAC]
+# Available training algorithms for this environment
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Simulation Timing
+# These settings control simulation rate and step logic
+# ───────────────────────────────────────────────────────────────────────
+
+sim_dt: 0.033
+# [seconds] Delta time for each simulation step
+
+decimation: 6
+# Number of sim steps per policy step (action is held constant over these)
+
+episode_length_s: 150
+# [seconds] Max time per episode
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Reward Terms
+# Each reward is calculated and weighted if enabled.
+# ───────────────────────────────────────────────────────────────────────
+
+rewards:
+  distance_to_target:
+    enabled: true
+    weight: 5.0
+    # Reward is inversely proportional to squared distance
+    # Normalized by episode length
+
+  reached_target:
+    enabled: true
+    weight: 5.0
+    threshold: 0.18
+    # Bonus for reaching the target with heading < 0.1 rad
+    # Scaled based on remaining time
+
+  oscillation:
+    enabled: true
+    weight: -0.05
+    # Penalizes abrupt changes in action (angular & linear)
+
+  angle_to_target:
+    enabled: true
+    weight: -1.5
+    # Penalizes large angular offset (>2.0 rad) from target
+
+  heading_soft_constraint:
+    enabled: true
+    weight: -0.5
+    # Penalizes driving backward (negative angular input)
+
+  collision:
+    enabled: true
+    weight: -3.0
+    threshold: 1.0
+    # Penalizes contact forces > threshold from contact sensor
+
+  far_from_target:
+    enabled: true
+    weight: -2.0
+    threshold: 11.0
+    # Penalizes when target distance > threshold
+
+  angle_diff:
+    enabled: true
+    weight: 5.0
+    # Reward based on angle alignment and distance to goal
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Termination Conditions
+# When episode ends. All values are boolean.
+# ───────────────────────────────────────────────────────────────────────
+
+terminations:
+  time_limit:
+    enabled: true
+    # Ends episode after max time is reached
+
+  is_success:
+    enabled: true
+    threshold: 0.18
+    # Episode ends when close to target & aligned
+
+  far_from_target:
+    enabled: true
+    threshold: 11.0
+    # Ends if rover is too far from target
+
+  collision:
+    enabled: true
+    threshold: 1.0
+    # Ends if force reading exceeds threshold
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Observation Terms
+# Enabled observations and their scaling factors
+# ───────────────────────────────────────────────────────────────────────
+
+observations:
+  actions:
+    enabled: true
+    # Previous action taken by the policy
+
+  distance:
+    enabled: true
+    scale: 0.11
+    # Euclidean distance to target (scaled)
+
+  heading:
+    enabled: true
+    scale: 0.318
+    # Angular offset to target (1/π normalization)
+
+  angle_diff:
+    enabled: true
+    scale: 0.318
+    # Rover's heading difference w.r.t. target
+
+  height_scan:
+    enabled: true
+    scale: 1.0
+    # Terrain elevation profile from ray cast

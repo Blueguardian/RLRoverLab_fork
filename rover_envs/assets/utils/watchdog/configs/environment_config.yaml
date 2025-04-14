@@ -1,0 +1,79 @@
+---
+# ═══════════════════════════════════════════════════════════════════════
+# ENVIRONMENT CONFIGURATION FILE
+# Defines everything related to the simulation world:
+# - Sensors attached to the agent
+# - Terrain and obstacles
+# - Lighting and visuals
+# - Scene layout
+# ═══════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Sensors
+# Sensors that provide observations to the agent.
+# Each sensor can be toggled individually.
+# ───────────────────────────────────────────────────────────────────────
+
+sensors:
+  contact_sensors:
+    enabled: true
+    to_prims: [".*Body", ".*Drive_Joint"]
+    # [LIST of REGEX] Target prims for contact detection
+
+  raycaster:
+    enabled: true
+    to_prim: "Body"
+    offset: [0.0, 0.0, 10.0]
+    resolution: 0.05
+    size: [5.0, 5.0]
+    mesh_prim_paths: ["/World/terrain/hidden_terrain"]
+    max_distance: 100.0
+    attach_yaw_only: true
+    debug_vis: false
+
+  camera:
+    enabled: false
+    # Reserved for future expansion
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Terrain
+# Configuration of the simulation terrain, generation or import.
+# ───────────────────────────────────────────────────────────────────────
+
+terrain:
+  type: "mars"
+  # Options: "mars", "debug", "custom"
+
+  heightmap_importer:
+    enabled: false
+    path: /terrain/heightmaps
+    # Relative path to heightmap directory
+
+    height_scale: 2.0
+    # [FLOAT] Multiplier applied to grayscale height data
+
+    size: [50.0, 50.0]
+    # [meters] Dimensions of the terrain area
+
+  obstacles:
+    no_obstacles: false
+    # If true, disables obstacle generation
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Lighting
+# Environment lighting setup
+# ───────────────────────────────────────────────────────────────────────
+
+lighting:
+  dome_light:
+    enabled: true
+    intensity: 100
+    color_temperature: 4500.0
+    texture_file: "assets/textures/background.png"
+
+  sphere_light:
+    enabled: true
+    intensity: 30000
+    radius: 50.0
+    color_temperature: 5500.0
+    position: [0.0, -180.0, 80.0]

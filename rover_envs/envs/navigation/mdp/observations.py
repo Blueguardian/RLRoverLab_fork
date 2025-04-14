@@ -56,12 +56,6 @@ def image(env, sensor_cfg, data_type):
     sensor = env.scene.sensors.get(sensor_cfg.name)
     output = sensor.data.output.get(data_type)
 
-    if isinstance(output, torch.Tensor):
-        # Normalize RGB images to [0, 1] and convert to float32
-        if data_type == "rgb" and output.dtype == torch.uint8:
-            output = output.float() / 255.0
-        return output
-
     try:
         output = torch.from_numpy(output)
         if data_type == "rgb" and output.dtype == torch.uint8:

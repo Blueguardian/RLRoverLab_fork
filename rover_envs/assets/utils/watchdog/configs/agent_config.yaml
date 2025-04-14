@@ -1,0 +1,151 @@
+---
+# ═══════════════════════════════════════════════════════════════════════
+# AGENT CONFIGURATION FILE
+# Contains everything related to the agent in an RL context:
+# - Robot structure
+# - Controller configuration
+# - Joint and actuator setup
+# - Physics and collision properties
+# - Initial pose configuration
+#
+# ❗️Sensors, observations, and environment interactions are defined
+#    in `environment_default.yaml`
+# ═══════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Agent Metadata
+# ───────────────────────────────────────────────────────────────────────
+
+name: AgentName
+# Friendly name for the robot/agent. Used for display/logging.
+
+robot_model_path: /aau_rover/Mars_Rover.usd
+# [PATH] Path to the robot's USD file (relative to the `robots/` folder)
+# Example: "/leo_rover/leo.usd"
+
+controller_config: ackermann
+# [STRING] Type of controller used.
+# Options:
+#   - ackermann
+#   - skidsteer
+#   - diffdrive
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Controller Parameters
+# Used for both kinematic control and mapping actions to joint behavior.
+# ───────────────────────────────────────────────────────────────────────
+
+controller:
+  asset_name: robot
+  # Internal identifier for the robot (do not change unless necessary)
+
+  wheelbase_length: 0.849
+  # [meters] Distance between front and rear wheel axles
+
+  middle_wheel_distance: 0.849
+  # [meters] Distance between the left and right wheels on same axle
+
+  rear_and_front_wheel_distance: 0.77
+  # [meters] Distance between front and rear wheels (redundant, used for fine-tuning Ackermann)
+
+  wheel_radius: 0.1
+  # [meters] Radius of wheels
+
+  min_steering_radius: 0.8
+  # [meters] Smallest radius the vehicle can turn with
+
+  steering_joint_names: [".*Steer_Revolute"]
+  # [LIST of STR] Names or regex patterns for steering joints
+
+  drive_joint_names: [".*Drive_Continuous"]
+  # [LIST of STR] Names or regex patterns for driving joints
+
+  offset: 0.0135
+  # Offset to apply to action inputs before scaling (for calibration)
+
+  scale: [1.0, 1.0]
+  # [LIST of FLOATS] Scaling factor for [steering, driving] actions
+
+  steering_order: ["FL", "FR", "RL", "RR"]
+  # Order in which steering joints should be applied
+
+  drive_order: ["FL", "FR", "CL", "CR", "RL", "RR"]
+  # Order in which drive joints should be applied
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Joint Actuator Configuration
+# Specifies physical behavior for each category of joints.
+# ───────────────────────────────────────────────────────────────────────
+
+joints:
+  base_drive:
+    joint_names_expr: [".*Drive_Continuous"]
+    # Regex pattern(s) for identifying drive joints
+
+    velocity_limit: 6.0          # [rad/s or m/s]
+    effort_limit: 12.0           # [Nm]
+    stiffness: 100.0             # [kg/s²] Drive stiffness
+    damping: 4000.0              # [kg/s] Drive damping
+
+  base_steering:
+    joint_names_expr: [".*Steer_Revolute"]
+    velocity_limit: 6.0          # [rad/s]
+    effort_limit: 12.0           # [Nm]
+    stiffness: 8000.0            # [kg/s²]
+    damping: 1000.0              # [kg/s]
+
+  passive_joints:
+    joint_names_expr: [".*(Rocker|Differential)_Revolute"]
+    # Used for passive elements like bogies and rockers
+
+    velocity_limit: 6.0
+    effort_limit: 0.0            # [Nm] Passive joints exert no torque
+    stiffness: 0.0
+    damping: 0.0
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Physics Properties
+# Physical simulation properties for collisions and movement.
+# ───────────────────────────────────────────────────────────────────────
+
+collision_properties:
+  contact_offset: 0.04           # [m] Distance at which contact begins
+  rest_offset: 0.01              # [m] Distance at which contact is stable
+
+rigidBody_properties:
+  max_linear_velocity: 1.5       # [m/s]
+  max_angular_velocity: 4.0      # [rad/s]
+  max_depenetration_velocity: 0.5
+  disable_gravity: false         # [bool] If true, gravity is disabled
+
+simulation_properties:
+  self_collision: false
+  solver_position_iteration_count: 32
+  solver_velocity_iteration_count: 4
+
+# ───────────────────────────────────────────────────────────────────────
+# ▶ Initial Pose Configuration
+# Defines robot spawn position and joint initialization.
+# ───────────────────────────────────────────────────────────────────────
+
+pose_config:
+  init_pose: [0.0, 0.0, 0.0]
+  # [x, y, z] world position at start
+
+  joint_pose:
+    pose_config:
+      names: [".*Steer_Revolute"]
+      values: [0.0]
+      # Optional: Set initial joint positions by name/pattern
+
+    velocity_config:
+      names: [".*Steer_Revolute", ".*Drive_Continuous"]
+      values: [0.0, 0.0]
+      # Optional: Set initial joint velocities
+
+# ═══════════════════════════════════════════════════════════════════════
+# NOTES:
+# - This file is meant to describe all agent-specific features.
+# - Does NOT contain training setup or observation sensors.
+# - Pair this with environment_default.yaml and training_default.yaml.
+# ═══════════════════════════════════════════════════════════════════════

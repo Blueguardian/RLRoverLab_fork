@@ -154,7 +154,7 @@ def train():
     #observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
     observation_space = gym.spaces.dict.Dict({
     "camera_rgb": gym.spaces.Box(low=0, high=1, shape=(3,240,320)),
-    "camera_depth": gym.spaces.Box(low=0, high=10, shape=(1,240,320)),
+    # "camera_depth": gym.spaces.Box(low=0, high=10, shape=(1,240,320)),
     "linear_obs": gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs[0],)),
 })
     action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(num_actions,))

@@ -1,4 +1,5 @@
 from gymnasium.spaces.box import Box
+from gymnasium.spaces.dict import Dict
 from isaaclab.envs import ManagerBasedRLEnv
 
 from rover_envs.envs.navigation.learning.skrl.models import (Critic, DeterministicActor, DeterministicNeuralNetwork,
