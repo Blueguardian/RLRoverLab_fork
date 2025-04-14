@@ -77,8 +77,8 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
     drive_joint_names: list[str] = MISSING
     """List of drive joints"""
 
-   #  slip_factor: float = MISSING
-   #  """Slip factor for wheels and terrain"""
+    bogie_joint_names: list[str] = []
+    """List of bogie joints, assumed none"""
 
     drive_order = ["FL", "FR", "RL", "RR"] # Leo_Rover
     """Name of the drive joints in the above order"""

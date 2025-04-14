@@ -135,11 +135,6 @@ pose_config:
     init_pose: [0.0, 0.0, 0.0],
     joint_pose:
     {
-#      pose_config:
-#      {
-#        names: [".*Steer_Revolute"],
-#        values: [0.0]
-#      },
       velocity_config:
       {
         names: [".*Drive_Joint"],
