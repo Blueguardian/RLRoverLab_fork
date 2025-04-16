@@ -22,6 +22,7 @@ from isaaclab.sim import SimulationCfg as SimCfg
 from isaaclab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise  # noqa: F401
+import torch
 
 ##
 # Scene Description
@@ -94,8 +95,8 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
 
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
-        data_types=["rgb"],
-        width=224, height=224,
+        data_types=["rgb","depth"],
+        width=112, height=112,
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=0.193, focus_distance=100.0,
             horizontal_aperture=20.955, clipping_range=(0.1, 100.0)
@@ -122,21 +123,25 @@ class ObservationCfg:
 
     @configclass
     class PolicyCfg(ObsGroup):
-        actions = ObsTerm(func=mdp.last_action)
-        distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
-                           "command_name": "target_pose"}, scale=0.11)
-        heading = ObsTerm(
-            func=mdp.angle_to_target_observation,
-            params={
-                "command_name": "target_pose",
-            },
-            scale=1 / math.pi,
-        )
-        angle_diff = ObsTerm(
-            func=mdp.angle_diff,
-            params={"command_name": "target_pose"},
-            scale=1 / math.pi
-        )
+
+        # distance = ObsTerm(func=mdp.distance_to_target_euclidean,
+        #                    params={
+        #                    "command_name": "target_pose"
+        #                    },
+        #                    scale=0.11)
+        # heading = ObsTerm(
+        #     func=mdp.angle_to_target_observation,
+        #     params={
+        #         "command_name": "target_pose",
+        #     },
+        #     scale=1 / math.pi,
+        # )
+        # angle_diff = ObsTerm(
+        #     func=mdp.angle_diff,
+        #     params={"command_name": "target_pose"},
+        #     scale=1 / math.pi
+        # )
+
         # height_scan = ObsTerm(
         #     func=mdp.height_scan_rover,
         #     scale=1,
@@ -146,13 +151,24 @@ class ObservationCfg:
             func=mdp.image,
             params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "rgb"}
         )
-        # camera_depth = ObsTerm(
-        #     func=mdp.image,
-        #     params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "distance_to_camera"}
-        # )
+
+        camera_depth = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "depth"}
+        )
+
+        linear_obs = ObsTerm(
+            func=lambda env: torch.cat([
+                mdp.distance_to_target_euclidean(env, command_name="target_pose"),
+                mdp.angle_to_target_observation(env, command_name="target_pose"),
+                mdp.angle_diff(env, command_name="target_pose")
+            ], dim=-1)
+        )
+
+        actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.enable_corruption = True
+            self.enable_corruption = False
             self.concatenate_terms = False
 
     policy: PolicyCfg = PolicyCfg()

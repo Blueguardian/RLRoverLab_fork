@@ -40,6 +40,7 @@ class HeightmapEncoder(nn.Module):
 class ConvHeightmapEncoder(nn.Module):
     def __init__(self, in_channels, encoder_features=[16, 32], encoder_activation="leaky_relu"):
         super().__init__()
+
         self.heightmap_size = torch.sqrt(torch.tensor(in_channels)).int()
         kernel_size = 3
         stride = 1
@@ -94,11 +95,10 @@ class ConvHeightmapEncoder(nn.Module):
 class ImageResnet(nn.Module):
     def __init__(self, in_channels, encoder_features=[80, 60], encoder_activation="leaky_relu"):
         super().__init__()
-        # Load pretrained ResNet18
         weights = ResNet18_Weights.DEFAULT
         base_model = resnet18(weights=weights)
 
-        # Modify input conv layer if in_channels != 3
+        # Replace input conv if channels ≠ 3 (e.g., grayscale or depth)
         if in_channels != 3:
             self.input_conv = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
             self.input_bn = nn.BatchNorm2d(64)
@@ -110,19 +110,19 @@ class ImageResnet(nn.Module):
             self.input_relu = base_model.relu
             self.input_maxpool = base_model.maxpool
 
-        # Extract layers up to avgpool (remove fc layer)
+        # Feature extractor (everything up to avgpool)
         self.feature_extractor = nn.Sequential(
             base_model.layer1,
             base_model.layer2,
             base_model.layer3,
             base_model.layer4,
-            base_model.avgpool  # Outputs [B, 512, 1, 1]
+            base_model.avgpool  # -> [B, 512, 1, 1]
         )
 
         self.flatten = nn.Flatten()
-        self.resnet_out_features = 512  # ResNet18 outputs 512 features after avgpool
+        self.resnet_out_features = 512
 
-        # MLP layers
+        # Optional MLP projection on top of ResNet
         self.mlps = nn.ModuleList()
         in_features = self.resnet_out_features
         for feature in encoder_features:
@@ -133,14 +133,13 @@ class ImageResnet(nn.Module):
         self.out_features = encoder_features[-1]
 
     def forward(self, x):
-        # If in_channels != 3, use the modified first conv
         x = self.input_conv(x)
         x = self.input_bn(x)
         x = self.input_relu(x)
         x = self.input_maxpool(x)
 
         x = self.feature_extractor(x)
-        x = self.flatten(x)  # Now shape [B, 512]
+        x = self.flatten(x)  # shape [B, 512]
 
         for layer in self.mlps:
             x = layer(x)
@@ -395,67 +394,92 @@ class Critic(DeterministicMixin, BaseModel):
 class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
     """Gaussian neural network model using ResNet18 for image encoding."""
 
-    def __init__(self,
-                 observation_space,
-                 action_space,
-                 device,
-                 mlp_input_size=5,
-                 mlp_layers=[256, 160, 128],
-                 mlp_activation="leaky_relu",
-                 encoder_input_size=None,
-                 encoder_layers=[80, 60],
-                 encoder_activation="leaky_relu",
-                 **kwargs):
-        """Initialize the Gaussian neural network with ResNet-based image encoder."""
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        device,
+        mlp_input_size=5,
+        mlp_layers=[256, 160, 128],
+        mlp_activation="leaky_relu",
+        encoder_input_size=None,
+        encoder_layers=[80, 60],
+        encoder_activation="leaky_relu",
+        **kwargs,
+    ):
         BaseModel.__init__(self, observation_space, action_space, device)
         GaussianMixin.__init__(self,
                                clip_actions=True,
                                clip_log_std=True,
-                               min_log_std=-20.0,  # fixed incorrect sign
+                               min_log_std=-20.0,
                                max_log_std=2.0,
-                               reduction="sum")
+                               reduction="sum"
+                               )
+
+        self.image_shape = (3, 112, 112)
+        self.depth_shape = (112, 112)
+        self.image_flat_size = int(torch.tensor(self.image_shape).prod())
+        self.depth_flat_size = int(torch.tensor(self.depth_shape).prod())
+
 
         self.mlp_input_size = mlp_input_size
         self.encoder_input_size = encoder_input_size
 
         in_channels = mlp_input_size
-        if self.encoder_input_size is not None:
-            self.encoder = ImageResnet(
-                in_channels=self.encoder_input_size,
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder.out_features
+        self.encoder_rgb = ImageResnet(
+            in_channels=3,
+            encoder_features=encoder_layers,
+            encoder_activation="relu"
+        )
+        in_channels += self.encoder_rgb.out_features
+
+        self.encoder_depth = ConvHeightmapEncoder(
+            in_channels=12544,
+            encoder_features=encoder_layers,
+            encoder_activation=encoder_activation
+        )
+        in_channels += self.encoder_depth.out_features
+
+        self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
         self.mlp = nn.ModuleList()
-        for feature in mlp_layers:
-            self.mlp.append(nn.Linear(in_channels, feature))
+        for layer in mlp_layers:
+            self.mlp.append(nn.Linear(in_channels, layer))
             self.mlp.append(get_activation(mlp_activation))
-            in_channels = feature
+            in_channels = layer
 
-        action_dim = action_space.shape[0]
-        self.mlp.append(nn.Linear(in_channels, action_dim))
+        self.mlp.append(nn.Linear(in_channels, action_space.shape[0]))
         self.mlp.append(nn.Tanh())
 
-        self.log_std_parameter = nn.Parameter(torch.zeros(action_dim))
+        self.log_std_parameter = nn.Parameter(torch.zeros(action_space.shape[0]))
+
+    def normalize_image(self, x):
+
+        return (x - self.imagenet_mean) / self.imagenet_std
+
 
     def compute(self, states, role="actor"):
-        # 'states' is a dict with keys: 'states' and 'image'
-        if self.encoder_input_size is None:
-            x = states["states"]
-        else:
-            # Encode the image and concatenate it with proprioceptive state
-            image_features = self.encoder(states["image"])
-            x = states["states"]
-            x = torch.cat([x, image_features], dim=1)
+        flat = states["states"]  # shape: (B, total_obs_dim)
 
-        for layer in self.mlp:
+        # Split flattened input into image and linear_obs
+        image_flat = flat[:, :self.image_flat_size]  # (B, 150528)
+        depth_flat = flat[:, self.image_flat_size:-self.mlp_input_size]  # (B, depth_size)
+
+        linear_obs = flat[:, -self.mlp_input_size:]
+        image = image_flat.view(-1, 3, 112, 112)  # (B, 3, 224, 224)
+        # depth_image = depth_flat.view(-1, 224, 224)
+        image = self.normalize_image(image)
+        image_features = self.encoder_rgb(image)  # (B, 60)
+        depth_features = self.encoder_depth(depth_flat)
+
+        # Combine encoded image + linear obs
+        x = torch.cat([image_features, depth_features, linear_obs], dim=1)  # (B, 125)
+
+        for i, layer in enumerate(self.mlp):
             x = layer(x)
 
         return x, self.log_std_parameter, {}
-
-
-
 
 class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
     """Gaussian neural network model."""
@@ -522,6 +546,80 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
 
         return x, self.log_std_parameter, {}
 
+
+class DeterministicNeuralNetworkConvResnet(DeterministicMixin, BaseModel):
+    """Deterministic neural network model using ResNet18 for image encoding."""
+
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        device,
+        mlp_input_size=5,  # Assuming [3 proprio + 2 action dims]
+        mlp_layers=[256, 160, 128],
+        mlp_activation="leaky_relu",
+        encoder_input_size=3,  # Number of image channels
+        encoder_layers=[80, 60],
+        encoder_activation="leaky_relu",
+        **kwargs,
+    ):
+        BaseModel.__init__(self, observation_space, action_space, device)
+        DeterministicMixin.__init__(self, clip_actions=False)
+
+        self.image_shape = (3, 112, 112)
+        self.image_flat_size = int(torch.tensor(self.image_shape).prod())
+        self.mlp_input_size = mlp_input_size
+        self.encoder_input_size = encoder_input_size
+
+        in_channels = mlp_input_size
+        self.encoder_rgb = ImageResnet(
+            in_channels=3,
+            encoder_features=encoder_layers,
+            encoder_activation=encoder_activation
+        )
+        in_channels += self.encoder_rgb.out_features
+
+        self.encoder_depth = ConvHeightmapEncoder(
+            in_channels=12544,
+            encoder_features=encoder_layers,
+            encoder_activation=encoder_activation
+        )
+        in_channels += self.encoder_depth.out_features
+
+        self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+
+        self.mlp = nn.ModuleList()
+        for f in mlp_layers:
+            self.mlp.append(nn.Linear(in_channels, f))
+            self.mlp.append(get_activation(mlp_activation))
+            in_channels = f
+
+        self.mlp.append(nn.Linear(in_channels, 1))  # Scalar value output
+
+    def normalize_image(self, x):
+        return (x - self.imagenet_mean) / self.imagenet_std
+
+    def compute(self, states, role="value"):
+        flat = states["states"]  # shape: (B, total_obs_dim)
+
+        # Split flattened input into image and linear_obs
+        image_flat = flat[:, :self.image_flat_size]  # (B, 150528)
+        depth_flat = flat[:, self.image_flat_size:-self.mlp_input_size]  # (B, depth_size)
+        linear_obs = flat[:, -self.mlp_input_size:]
+        image = image_flat.view(-1, 3, 112, 112)  # (B, 3, 224, 224)
+        # depth_image = depth_flat.view(-1, 224, 224)
+
+        image = self.normalize_image(image)
+        image_features = self.encoder_rgb(image)  # (B, 60)
+        depth_features = self.encoder_depth(depth_flat)
+        # Combine encoded image + linear obs
+        x = torch.cat([image_features, depth_features, linear_obs], dim=1)  # (B, 125)
+
+        for layer in self.mlp:
+            x = layer(x)
+
+        return x, {}
 
 class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
     """Gaussian neural network model."""

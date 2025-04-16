@@ -20,7 +20,6 @@ def angle_to_target_observation(env: ManagerBasedRLEnv, command_name: str) -> to
 
     # Calculate the angle between the rover's heading [1, 0] and the vector to the target.
     angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
-
     return angle.unsqueeze(-1)
 
 
@@ -49,18 +48,37 @@ def angle_diff(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     """Calculate the angle difference between the rover's heading and the target."""
     # Get the angle to the target
     heading_angle_diff = env.command_manager.get_command(command_name)[:, 3]
-
     return heading_angle_diff.unsqueeze(-1)
 
 def image(env, sensor_cfg, data_type):
     sensor = env.scene.sensors.get(sensor_cfg.name)
     output = sensor.data.output.get(data_type)
 
-    try:
-        output = torch.from_numpy(output)
-        if data_type == "rgb" and output.dtype == torch.uint8:
-            output = output.float() / 255.0
-        return output
-    except Exception as e:
-        print(f"[ERROR] Failed to convert output to torch tensor: {e}")
-        return torch.zeros((3, 240, 320), dtype=torch.float32)
+    if data_type == "rgb":
+        try:
+            if isinstance(output, torch.Tensor):
+                pass  # already a tensor
+            else:
+                output = torch.from_numpy(output)
+
+            if output.dtype == torch.uint8:
+                output = output.float() / 255.0
+            output = output.permute(0, 3, 1, 2)
+            return output
+        except Exception as e:
+            print(f"[ERROR RGB] Failed to process RGB output: {e}")
+            return torch.zeros((1, 3, 112, 112), dtype=torch.float32, device=env.device)
+    elif data_type == "depth":
+        try:
+            depth = sensor.data.output.get("depth")
+            if torch.isinf(depth).any():
+                depth = torch.nan_to_num(depth, nan=0.0, posinf=10.0, neginf=0.0)
+            depth = depth.permute(0, 3, 1, 2)  # to [B, 1, H, W]
+            return depth
+        except Exception as e:
+            print(f"[ERROR] Failed to handle depth output: {e}")
+            return torch.zeros((1, 224, 224), dtype=torch.float32)
+
+    else:
+        print(f"[ERROR] Unknown data_type: {data_type}")
+        return torch.zeros((1, 3, 112, 112), dtype=torch.float32, device=env.device)
