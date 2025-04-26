@@ -1,6 +1,9 @@
 import torch
+
+from isaaclab.envs import VecEnvStepReturn
 from isaaclab.envs.manager_based_rl_env import ManagerBasedRLEnv
 from isaaclab.envs.manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
+import time
 
 
 class ManagerBasedRLEnvLab(ManagerBasedRLEnv):
@@ -9,6 +12,7 @@ class ManagerBasedRLEnvLab(ManagerBasedRLEnv):
 
     def __init__(self, cfg: ManagerBasedRLEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
+
 
     def _reset_idx(self, idx: torch.Tensor):
         """Reset the environment at the given indices.
@@ -19,7 +23,6 @@ class ManagerBasedRLEnvLab(ManagerBasedRLEnv):
         Args:
             idx (torch.Tensor): Indices of the environments to reset.
         """
-
         super()._reset_idx(idx)
         # Done this way because SKRL requires the "episode" key in the extras dict to be present in order to log.
         self.extras["episode"] = self.extras["log"]

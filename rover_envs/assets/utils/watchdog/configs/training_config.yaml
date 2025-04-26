@@ -71,7 +71,7 @@ rewards:
     threshold: 11.0
     # Penalizes when target distance > threshold
 
-  angle_diff:
+  angle_alignment:
     enabled: true
     weight: 5.0
     # Reward based on angle alignment and distance to goal

@@ -108,7 +108,10 @@ def heading_soft_contraint(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) ->
     This function applies a penalty when the rover's action indicates reverse movement.
     The penalty is normalized by the maximum episode length.
     """
-    return torch.where(env.action_manager.action[:, 0] < 0.0, (1.0 / env.max_episode_length), 0.0)
+    # return torch.where(env.action_manager.action[:, 0] < 0.0, (1.0 / env.max_episode_length), 0.0)
+    reverse_speed = torch.clamp(-env.action_manager.action[:, 0], min=0.0)  # Only penalize negatives
+    penalty = (reverse_speed * 0.4) / env.max_episode_length  # 0.2 is a tunable scale factor
+    return penalty
 
 
 def collision_penalty(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float) -> torch.Tensor:

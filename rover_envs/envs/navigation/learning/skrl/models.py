@@ -5,6 +5,12 @@ from torchvision.models import resnet18, ResNet18_Weights
 from skrl.models.torch.base import Model as BaseModel
 from skrl.models.torch.deterministic import DeterministicMixin
 from skrl.models.torch.gaussian import GaussianMixin
+from torchvision.transforms.functional import to_pil_image
+import os
+import numpy as np
+import time
+
+from isaaclab.envs.mdp import image_features
 
 
 def get_activation(activation_name):
@@ -90,7 +96,6 @@ class ConvHeightmapEncoder(nn.Module):
         for layer in self.mlps:
             x = layer(x)
         return x
-
 
 class ImageResnet(nn.Module):
     def __init__(self, in_channels, encoder_features=[80, 60], encoder_activation="leaky_relu"):
@@ -211,7 +216,6 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
 
         return x, self.log_std_parameter, {}
 
-
 class DeterministicNeuralNetwork(DeterministicMixin, BaseModel):
     """Gaussian neural network model."""
 
@@ -271,7 +275,6 @@ class DeterministicNeuralNetwork(DeterministicMixin, BaseModel):
 
         return x, {}
 
-
 class DeterministicActor(DeterministicMixin, BaseModel):
     """Deterministic actor model."""
 
@@ -330,7 +333,6 @@ class DeterministicActor(DeterministicMixin, BaseModel):
             x = layer(x)
 
         return x, {}
-
 
 class Critic(DeterministicMixin, BaseModel):
     """Critic model."""
@@ -408,74 +410,132 @@ class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
         **kwargs,
     ):
         BaseModel.__init__(self, observation_space, action_space, device)
-        GaussianMixin.__init__(self,
-                               clip_actions=True,
-                               clip_log_std=True,
-                               min_log_std=-20.0,
-                               max_log_std=2.0,
-                               reduction="sum"
-                               )
+        GaussianMixin.__init__(
+            self, clip_actions=True, clip_log_std=True, min_log_std=-20.0, max_log_std=2.0, reduction="sum"
+        )
 
-        self.image_shape = (3, 112, 112)
-        self.depth_shape = (112, 112)
-        self.image_flat_size = int(torch.tensor(self.image_shape).prod())
-        self.depth_flat_size = int(torch.tensor(self.depth_shape).prod())
+        # Extract space sizes from observation_space
+        self.obs_sizes = {}
+        for key, space in observation_space.items():
+            size = 1
+            for dim in space.shape:
+                size *= dim
+            self.obs_sizes[key] = size
 
-
-        self.mlp_input_size = mlp_input_size
+        self.mlp_input_size = self.obs_sizes.get("linear_obs", 0)
         self.encoder_input_size = encoder_input_size
 
-        in_channels = mlp_input_size
-        self.encoder_rgb = ImageResnet(
-            in_channels=3,
-            encoder_features=encoder_layers,
-            encoder_activation="relu"
-        )
-        in_channels += self.encoder_rgb.out_features
+        in_channels = self.obs_sizes.get("linear_obs", 0)
+        if self.obs_sizes.get("camera_rgb", None):
+            self.encoder_rgb = ImageResnet(
+                in_channels=3,
+                encoder_features=encoder_layers,
+                encoder_activation="relu"
+            )
+            self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+            self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+            in_channels += self.encoder_rgb.out_features
 
-        self.encoder_depth = ConvHeightmapEncoder(
-            in_channels=12544,
-            encoder_features=encoder_layers,
-            encoder_activation=encoder_activation
-        )
-        in_channels += self.encoder_depth.out_features
+        if self.obs_sizes.get("camera_depth", None):
+            self.encoder_depth = ConvHeightmapEncoder(
+                in_channels=self.obs_sizes["camera_depth"],
+                encoder_features=encoder_layers,
+                encoder_activation=encoder_activation
+            )
+            in_channels += self.encoder_depth.out_features
 
-        self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
-        self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        if self.obs_sizes.get("raycaster_cam", None):
+            self.encoder_depthCam = ConvHeightmapEncoder(
+                in_channels=self.obs_sizes["raycaster_cam"],
+                encoder_features=encoder_layers,
+                encoder_activation=encoder_activation
+            )
+            in_channels += self.encoder_depthCam.out_features
+
+        if self.obs_sizes.get("raycaster", None):
+            self.encoder_raycaster = ConvHeightmapEncoder(
+                in_channels=self.obs_sizes["raycaster"],
+                encoder_features=encoder_layers,
+                encoder_activation=encoder_activation
+            )
+            in_channels += self.encoder_raycaster.out_features
 
         self.mlp = nn.ModuleList()
         for layer in mlp_layers:
             self.mlp.append(nn.Linear(in_channels, layer))
             self.mlp.append(get_activation(mlp_activation))
             in_channels = layer
-
+        self.debug_counter = 0
         self.mlp.append(nn.Linear(in_channels, action_space.shape[0]))
         self.mlp.append(nn.Tanh())
 
         self.log_std_parameter = nn.Parameter(torch.zeros(action_space.shape[0]))
 
     def normalize_image(self, x):
+        return ((x.float()/255) - self.imagenet_mean) / self.imagenet_std
 
-        return (x - self.imagenet_mean) / self.imagenet_std
+    def save_tensor_to_csv(self, tensor, name="tensor", out_dir="/workspace/isaac_rover/debug_tensors", env_idx=0, step=0):
+        os.makedirs(out_dir, exist_ok=True)
 
+        # Convert to CPU + NumPy
+        tensor = tensor.detach().cpu()
+        np_tensor = tensor.numpy()
+
+        # Save flattened version
+        flat_path = os.path.join(out_dir, f"{name}_env{env_idx}_step{step}_flat.csv")
+        np.savetxt(flat_path, np_tensor.flatten(), delimiter=",", fmt="%.6f")
+
+        # If it's 2D or 3D (like depth or image channels), save shape-preserving CSV
+        if np_tensor.ndim == 2:
+            shape_path = os.path.join(out_dir, f"{name}_env{env_idx}_step{step}_matrix.csv")
+            np.savetxt(shape_path, np_tensor, delimiter=",", fmt="%.6f")
+        elif np_tensor.ndim == 3:
+            for i, channel in enumerate(np_tensor):
+                ch_path = os.path.join(out_dir, f"{name}_env{env_idx}_step{step}_ch{i}.csv")
+                np.savetxt(ch_path, channel, delimiter=",", fmt="%.6f")
+
+    def save_rgb_depth(self, rgb_tensor, depth_tensor, step_env=0, env_idx=0, out_dir="/workspace/isaac_rover/debug_images"):
+        os.makedirs(out_dir, exist_ok=True)
+
+        # ---- RGB ----
+        print(f"RGB stats — min: {rgb_tensor.min()}, max: {rgb_tensor.max()}, dtype: {rgb_tensor.dtype}")
+        rgb_tensor = rgb_tensor[env_idx] / 255
+        # rgb_tensor = rgb_tensor[env_idx].to(torch.uint8)
+        rgb = rgb_tensor.detach().to("cpu")
+        rgb_image = to_pil_image(rgb)
+        rgb_image.save(f"{out_dir}/rgb_step{step_env}_env{env_idx}.png")
+
+        # ---- Depth ----
+        print(f"RGB stats — min: {depth_tensor.min()}, max: {depth_tensor.max()}, dtype: {depth_tensor.dtype}")
+        depth = depth_tensor[env_idx].detach().to("cpu").squeeze(0)  # Remove channel if 1xHxW
+        depth = (depth - depth.min()) / (depth.max() - depth.min() + 1e-6)  # Normalize to 0-1
+        depth_image = to_pil_image(depth)
+        depth_image.save(f"{out_dir}/depth_step{step_env}_env{env_idx}.png")
 
     def compute(self, states, role="actor"):
-        flat = states["states"]  # shape: (B, total_obs_dim)
+        # Reform the observation space TODO: Check for correct order with rgb
+        obs_space = self.tensor_to_space(states["states"], self.observation_space)
 
-        # Split flattened input into image and linear_obs
-        image_flat = flat[:, :self.image_flat_size]  # (B, 150528)
-        depth_flat = flat[:, self.image_flat_size:-self.mlp_input_size]  # (B, depth_size)
+        # Extract the observations
+        depth = obs_space["raycaster_cam"]
+        # depth = obs_space["camera_depth"]
+        proprioceptive_obs = obs_space["linear_obs"]
+        # rgb = obs_space["camera_rgb"]
+        # rgb_normrect = self.normalize_image(rgb)
+        # rgb_features = self.encoder_rgb(image_normrect)  # (B, 60)
+        # depth_features = self.encoder_depth(depth.flatten(start_dim=1))
+        depth_features = self.encoder_depthCam(depth)
 
-        linear_obs = flat[:, -self.mlp_input_size:]
-        image = image_flat.view(-1, 3, 112, 112)  # (B, 3, 224, 224)
-        # depth_image = depth_flat.view(-1, 224, 224)
-        image = self.normalize_image(image)
-        image_features = self.encoder_rgb(image)  # (B, 60)
-        depth_features = self.encoder_depth(depth_flat)
+        # DEBUG output image and depth image (greyscale)
+        # if self.debug_counter % 500 == 0:
+        #     self.save_rgb_depth(rgb, depth, step_env=self.debug_counter)
+        #     self.save_tensor_to_csv(rgb_normrect, "rgb_normrect", step=self.debug_counter)
+        #     self.save_tensor_to_csv(rgb_features, "rgb_features", step=self.debug_counter)
+        #     self.save_tensor_to_csv(depth_features, "depth_features", step=self.debug_counter)
+        # self.debug_counter += 1
 
-        # Combine encoded image + linear obs
-        x = torch.cat([image_features, depth_features, linear_obs], dim=1)  # (B, 125)
-
+        # x = torch.cat([rgb_features, depth_features, linear_obs], dim=1)
+        x = torch.cat([depth_features, proprioceptive_obs], dim=1)
         for i, layer in enumerate(self.mlp):
             x = layer(x)
 
@@ -546,136 +606,101 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
 
         return x, self.log_std_parameter, {}
 
-
 class DeterministicNeuralNetworkConvResnet(DeterministicMixin, BaseModel):
     """Deterministic neural network model using ResNet18 for image encoding."""
 
     def __init__(
-        self,
-        observation_space,
-        action_space,
-        device,
-        mlp_input_size=5,  # Assuming [3 proprio + 2 action dims]
-        mlp_layers=[256, 160, 128],
-        mlp_activation="leaky_relu",
-        encoder_input_size=3,  # Number of image channels
-        encoder_layers=[80, 60],
-        encoder_activation="leaky_relu",
-        **kwargs,
+            self,
+            observation_space,
+            action_space,
+            device,
+            mlp_input_size=5,
+            mlp_layers=[256, 160, 128],
+            mlp_activation="leaky_relu",
+            encoder_input_size=None,
+            encoder_layers=[80, 60],
+            encoder_activation="leaky_relu",
+            **kwargs,
     ):
         BaseModel.__init__(self, observation_space, action_space, device)
-        DeterministicMixin.__init__(self, clip_actions=False)
+        DeterministicMixin.__init__(self,
+                               clip_actions=False
+                               )
+        # Extract space sizes from observation_space
+        self.obs_sizes = {}
+        for key, space in observation_space.items():
+            size = 1
+            for dim in space.shape:
+                size *= dim
+            self.obs_sizes[key] = size
 
-        self.image_shape = (3, 112, 112)
-        self.image_flat_size = int(torch.tensor(self.image_shape).prod())
-        self.mlp_input_size = mlp_input_size
+        self.mlp_input_size = self.obs_sizes.get("linear_obs", 0)
         self.encoder_input_size = encoder_input_size
 
-        in_channels = mlp_input_size
-        self.encoder_rgb = ImageResnet(
-            in_channels=3,
-            encoder_features=encoder_layers,
-            encoder_activation=encoder_activation
-        )
-        in_channels += self.encoder_rgb.out_features
+        in_channels = self.obs_sizes.get("linear_obs", 0)
+        if self.obs_sizes.get("camera_rgb", None):
+            self.encoder_rgb = ImageResnet(
+                in_channels=3,
+                encoder_features=encoder_layers,
+                encoder_activation="relu"
+            )
+            in_channels += self.encoder_rgb.out_features
 
-        self.encoder_depth = ConvHeightmapEncoder(
-            in_channels=12544,
-            encoder_features=encoder_layers,
-            encoder_activation=encoder_activation
-        )
-        in_channels += self.encoder_depth.out_features
+        if self.obs_sizes.get("camera_depth", None):
+            self.encoder_depth = ConvHeightmapEncoder(
+                in_channels=self.obs_sizes["camera_depth"],
+                encoder_features=encoder_layers,
+                encoder_activation=encoder_activation
+            )
+            in_channels += self.encoder_depth.out_features
+
+        if self.obs_sizes.get("raycaster_cam", None):
+            self.encoder_depthCam = ConvHeightmapEncoder(
+                in_channels=self.obs_sizes["raycaster_cam"],
+                encoder_features=encoder_layers,
+                encoder_activation=encoder_activation
+            )
+            in_channels += self.encoder_depthCam.out_features
+
+        if self.obs_sizes.get("raycaster", None):
+            self.encoder_raycaster = ConvHeightmapEncoder(
+                in_channels=self.obs_sizes["raycaster"],
+                encoder_features=encoder_layers,
+                encoder_activation=encoder_activation
+            )
+            in_channels += self.encoder_raycaster.out_features
 
         self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
         self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
         self.mlp = nn.ModuleList()
-        for f in mlp_layers:
-            self.mlp.append(nn.Linear(in_channels, f))
+        for layer in mlp_layers:
+            self.mlp.append(nn.Linear(in_channels, layer))
             self.mlp.append(get_activation(mlp_activation))
-            in_channels = f
+            in_channels = layer
+        self.debug_counter = 0
+        self.mlp.append(nn.Linear(in_channels, 1))
 
-        self.mlp.append(nn.Linear(in_channels, 1))  # Scalar value output
-
-    def normalize_image(self, x):
+    def normalize_rgb(self, x):
         return (x - self.imagenet_mean) / self.imagenet_std
 
     def compute(self, states, role="value"):
-        flat = states["states"]  # shape: (B, total_obs_dim)
+        # Reform the observation space TODO: Check for correct order with rgb
+        obs_space = self.tensor_to_space(states["states"], self.observation_space)
 
-        # Split flattened input into image and linear_obs
-        image_flat = flat[:, :self.image_flat_size]  # (B, 150528)
-        depth_flat = flat[:, self.image_flat_size:-self.mlp_input_size]  # (B, depth_size)
-        linear_obs = flat[:, -self.mlp_input_size:]
-        image = image_flat.view(-1, 3, 112, 112)  # (B, 3, 224, 224)
-        # depth_image = depth_flat.view(-1, 224, 224)
+        # Extract the observations
+        # depth = obs_space["camera_depth"]
+        depth = obs_space["raycaster_cam"]
+        proprioceptive_obs = obs_space["linear_obs"]
+        # rgb = obs_space["camera_rgb"]
+        # rgb_normrect = self.normalize_image(rgb)
+        # rgb_features = self.encoder_rgb(image_normrect)  # (B, 60)
+        # depth_features = self.encoder_depth(depth.flatten(start_dim=1))
+        depth_features = self.encoder_depthCam(depth)
 
-        image = self.normalize_image(image)
-        image_features = self.encoder_rgb(image)  # (B, 60)
-        depth_features = self.encoder_depth(depth_flat)
-        # Combine encoded image + linear obs
-        x = torch.cat([image_features, depth_features, linear_obs], dim=1)  # (B, 125)
-
-        for layer in self.mlp:
-            x = layer(x)
-
-        return x, {}
-
-class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
-    """Gaussian neural network model."""
-
-    def __init__(
-        self,
-        observation_space,
-        action_space,
-        device,
-        mlp_input_size=4,
-        mlp_layers=[256, 160, 128],
-        mlp_activation="leaky_relu",
-        encoder_input_size=None,
-        encoder_layers=[80, 60],
-        encoder_activation="leaky_relu",
-        **kwargs,
-    ):
-        """Initialize the Gaussian neural network model.
-
-        Args:
-            observation_space (gym.spaces.Space): The observation space of the environment.
-            action_space (gym.spaces.Space): The action space of the environment.
-            device (torch.device): The device to use for computation.
-            encoder_features (list): The number of features for each encoder layer.
-            encoder_activation (str): The activation function to use for each encoder layer.
-        """
-        BaseModel.__init__(self, observation_space, action_space, device)
-        DeterministicMixin.__init__(self, clip_actions=False)
-
-        self.mlp_input_size = mlp_input_size
-        self.encoder_input_size = encoder_input_size
-
-        in_channels = self.mlp_input_size
-        if self.encoder_input_size is not None:
-            self.encoder = ConvHeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
-            in_channels += self.encoder.out_features
-
-        self.mlp = nn.ModuleList()
-
-        action_space = action_space.shape[0]
-        for feature in mlp_layers:
-            self.mlp.append(nn.Linear(in_channels, feature))
-            self.mlp.append(get_activation(mlp_activation))
-            in_channels = feature
-
-        self.mlp.append(nn.Linear(in_channels, 1))
-
-    def compute(self, states, role="actor"):
-        if self.encoder_input_size is None:
-            x = states["states"]
-        else:
-            x = states["states"][:, :self.mlp_input_size]
-            encoder_output = self.encoder(states["states"][:, self.mlp_input_size - 1:-1])
-            x = torch.cat([x, encoder_output], dim=1)
-
-        for layer in self.mlp:
+        # x = torch.cat([rgb_features, depth_features, linear_obs], dim=1)
+        x = torch.cat([depth_features, proprioceptive_obs], dim=1)
+        for i, layer in enumerate(self.mlp):
             x = layer(x)
 
         return x, {}
@@ -738,3 +763,62 @@ class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
 #             x = layer(x)
 #
 #         return x, {}
+
+class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
+    """Gaussian neural network model."""
+
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        device,
+        mlp_input_size=4,
+        mlp_layers=[256, 160, 128],
+        mlp_activation="leaky_relu",
+        encoder_input_size=None,
+        encoder_layers=[80, 60],
+        encoder_activation="leaky_relu",
+        **kwargs,
+    ):
+        """Initialize the Gaussian neural network model.
+
+        Args:
+            observation_space (gym.spaces.Space): The observation space of the environment.
+            action_space (gym.spaces.Space): The action space of the environment.
+            device (torch.device): The device to use for computation.
+            encoder_features (list): The number of features for each encoder layer.
+            encoder_activation (str): The activation function to use for each encoder layer.
+        """
+        BaseModel.__init__(self, observation_space, action_space, device)
+        DeterministicMixin.__init__(self, clip_actions=False)
+
+        self.mlp_input_size = mlp_input_size
+        self.encoder_input_size = encoder_input_size
+
+        in_channels = self.mlp_input_size
+        if self.encoder_input_size is not None:
+            self.encoder = ConvHeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += self.encoder.out_features
+
+        self.mlp = nn.ModuleList()
+
+        action_space = action_space.shape[0]
+        for feature in mlp_layers:
+            self.mlp.append(nn.Linear(in_channels, feature))
+            self.mlp.append(get_activation(mlp_activation))
+            in_channels = feature
+
+        self.mlp.append(nn.Linear(in_channels, 1))
+
+    def compute(self, states, role="actor"):
+        if self.encoder_input_size is None:
+            x = states["states"]
+        else:
+            x = states["states"][:, :self.mlp_input_size]
+            encoder_output = self.encoder(states["states"][:, self.mlp_input_size - 1:-1])
+            x = torch.cat([x, encoder_output], dim=1)
+
+        for layer in self.mlp:
+            x = layer(x)
+
+        return x, {}

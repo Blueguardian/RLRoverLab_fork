@@ -1,4 +1,5 @@
-
+import time
+import gc
 import torch
 from isaaclab.envs.common import VecEnvObs
 from isaaclab.envs.manager_based_rl_env import ManagerBasedRLEnv
@@ -27,6 +28,10 @@ class RoverEnv(ManagerBasedRLEnv):
 
         self.global_step_counter = 0
 
+    def print_tensor_summary(self, step_num):
+        tensor_count = sum(1 for obj in gc.get_objects() if isinstance(obj, torch.Tensor))
+        print(f"[TENSOR DEBUG] Step {step_num}: {tensor_count} tensors alive.")
+
     def _reset_idx(self, idx: torch.Tensor):
         """Reset the environment at the given indices.
 
@@ -39,6 +44,7 @@ class RoverEnv(ManagerBasedRLEnv):
         super()._reset_idx(idx)
         # Done this way because SKRL requires the "episode" key in the extras dict to be present in order to log.
         self.extras["episode"] = self.extras["log"]
+
 
     # This function is reimplemented to make visualization less laggy
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
@@ -60,11 +66,11 @@ class RoverEnv(ManagerBasedRLEnv):
         Returns:
             A tuple containing the observations, rewards, resets (terminated and truncated) and extras.
         """
+        if self.global_step_counter % 100 == 0:
+            self.print_tensor_summary(self.global_step_counter)
+
         self.global_step_counter += 1
         # process actions
-        # action = torch.zeros_like(action)
-        # action[0][:] = 0
-        # action[1][:] = 10
         self.action_manager.process_action(action)
         # perform physics stepping
         for _ in range(self.cfg.decimation):
@@ -103,6 +109,8 @@ class RoverEnv(ManagerBasedRLEnv):
         # -- compute observations
         # note: done after reset to get the correct observations for reset envs
         self.obs_buf = self.observation_manager.compute()
+
+
 
         # return observations, rewards, resets and extras
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras

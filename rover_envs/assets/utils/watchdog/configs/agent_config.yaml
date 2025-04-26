@@ -146,6 +146,4 @@ pose_config:
 # ═══════════════════════════════════════════════════════════════════════
 # NOTES:
 # - This file is meant to describe all agent-specific features.
-# - Does NOT contain training setup or observation sensors.
-# - Pair this with environment_default.yaml and training_default.yaml.
 # ═══════════════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-from gymnasium.spaces import Box
+from gymnasium.spaces import Box, Dict
 from isaaclab.envs import ManagerBasedRLEnv
 
 from rover_envs.envs.navigation.learning.skrl.agents import PPO_agent, RPO_agent, SAC_agent, TD3_agent, TRPO_agent

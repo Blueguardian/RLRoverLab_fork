@@ -16,8 +16,9 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg  # noqa: F401
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns, TiledCameraCfg, TiledCamera
-from isaaclab.sim import PhysxCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns, TiledCameraCfg, TiledCamera, Camera, CameraCfg, RayCasterCamera, RayCasterCameraCfg
+from isaaclab.sensors.ray_caster.patterns import PinholeCameraPatternCfg
+from isaaclab.sim import PhysxCfg, RenderCfg
 from isaaclab.sim import SimulationCfg as SimCfg
 from isaaclab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
 from isaaclab.utils import configclass
@@ -83,30 +84,48 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
     )
     # contact_sensor = None
 
-    # height_scanner = RayCasterCfg(
-    #     prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
-    #     offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
-    #     attach_yaw_only=True,
-    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
-    #     debug_vis=False,
-    #     mesh_prim_paths=["/World/terrain/hidden_terrain"],
-    #     max_distance=100.0,
+    height_scanner = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/terrain/hidden_terrain"],
+        max_distance=100.0,
+    )
+
+    # raycaster_camera: RayCasterCamera = RayCasterCameraCfg(
+    #     prim_path="{ENV_REGEX_NS}/.*/Main_Body",
+    #     data_types=["distance_to_image_plane"],
+    #     offset=TiledCameraCfg.OffsetCfg(
+    #                 pos=(0.55, 0.0, 0.6),
+    #                 rot=(0.5, 0.5, -0.5, -0.5),
+    #                 convention="parent"),
+    #     max_distance=10.0,
+    #     pattern_cfg=PinholeCameraPatternCfg(focal_length=24.0, horizontal_aperture=20.955, height=112, width=112),
+    #     depth_clipping_behavior="max",
+    #     mesh_prim_paths=["/World/terrain/hidden_terrain"]
     # )
 
-    tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
-        data_types=["rgb","depth"],
-        width=112, height=112,
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=0.193, focus_distance=100.0,
-            horizontal_aperture=20.955, clipping_range=(0.1, 100.0)
-        ),
-        offset=TiledCameraCfg.OffsetCfg(
-            pos=(0.0, 0.0, 0.05),
-            rot=(0.5, 0.5, -0.5, -0.5),
-            convention="parent"
-        )
-    )
+    # tiled_camera: TiledCameraCfg = TiledCameraCfg(
+    #     # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
+    #     prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
+    #     # debug_vis=True,
+    #     # data_types=["rgb","depth"],
+    #     depth_clipping_behavior='max',
+    #     data_types=["depth"],
+    #     width=112, height=112,
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #         focal_length=24.00, focus_distance=400.0,
+    #         horizontal_aperture=20.955, clipping_range=(0.1, 10.0)
+    #     ),
+    #     history_length=0,
+    #     offset=TiledCameraCfg.OffsetCfg(
+    #         pos=(0.55, 0.0, 0.6),
+    #         rot=(0.5, 0.5, -0.5, -0.5),
+    #         convention="parent"
+    #     )
+    # )
 
 
 @configclass
@@ -141,35 +160,62 @@ class ObservationCfg:
         #     params={"command_name": "target_pose"},
         #     scale=1 / math.pi
         # )
-
-        # height_scan = ObsTerm(
-        #     func=mdp.height_scan_rover,
-        #     scale=1,
-        #     params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
-        # )
-        camera_rgb = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "rgb"}
-        )
-
-        camera_depth = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "depth"}
-        )
-
-        linear_obs = ObsTerm(
-            func=lambda env: torch.cat([
-                mdp.distance_to_target_euclidean(env, command_name="target_pose"),
-                mdp.angle_to_target_observation(env, command_name="target_pose"),
-                mdp.angle_diff(env, command_name="target_pose")
-            ], dim=-1)
-        )
-
         actions = ObsTerm(func=mdp.last_action)
+        distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
+            "command_name": "target_pose"}, scale=0.11)
+        heading = ObsTerm(
+            func=mdp.angle_to_target_observation,
+            params={
+                "command_name": "target_pose",
+            },
+            scale=1 / math.pi,
+        )
+        angle_diff = ObsTerm(
+            func=mdp.relative_orientation,
+            params={"command_name": "target_pose"},
+            scale=1 / math.pi
+        )
+
+        height_scan = ObsTerm(
+            func=mdp.height_scan_rover,
+            scale=1,
+            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        )
+        # camera_rgb = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("tiled_camera"), "data_type": "rgb"}
+        # )
+        # camera_rgb = ObsTerm(
+        #     func=mdp.image,
+        #     params={
+        #         "sensor_cfg": SceneEntityCfg("tiled_camera"),
+        #         "data_type": "rgb",}
+        # )
+        # camera_depth = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
+        #             "data_type": "depth",
+        #             }
+        # )
+
+        # raycaster_cam = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("raycaster_camera"),
+        #             "data_type": "RaycasterCamera"}
+        # )
+
+        # linear_obs = ObsTerm(
+        #     func=lambda env: torch.cat([
+        #         mdp.distance_to_target_euclidean(env, command_name="target_pose"),
+        #         mdp.angle_to_target_observation(env, command_name="target_pose"),
+        #         mdp.relative_orientation(env, command_name="target_pose"),
+        #         mdp.last_action(env)
+        #     ], dim=-1)
+        # )
 
         def __post_init__(self):
             self.enable_corruption = False
-            self.concatenate_terms = False
+            self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
 
@@ -212,7 +258,7 @@ class RewardsCfg:
         weight=-2.0,
         params={"command_name": "target_pose", "threshold": 11.0},
     )
-    angle_diff = RewTerm(
+    goal_orientation_alignment = RewTerm(
         func=mdp.angle_to_goal_reward,
         weight=5.0,
         params={"command_name": "target_pose"},
@@ -328,9 +374,11 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.tiled_camera is not None:
-            self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
-        # if self.scene.height_scanner is not None:
-        #     self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        # if self.scene.tiled_camera is not None:
+        #     self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
+        # if self.scene.raycaster_camera is not None:
+        #     self.scene.raycaster_camera.update_period = self.sim.dt * self.decimation
+        if self.scene.height_scanner is not None:
+            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation

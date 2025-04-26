@@ -145,7 +145,7 @@ class configGen:
                 "collision_props": self._nestedDict(sim_utils.CollisionPropertiesCfg, params.get("collision_properties")),
                 "rigid_props": self._nestedDict(sim_utils.RigidBodyPropertiesCfg, params.get("rigidBody_properties")),
                 "articulation_props": self._nestedDict(sim_utils.ArticulationRootPropertiesCfg, params.get("simulation_properties")),
-                "visible": False,
+                # "visible": False,
 
             }),
             init_state=self._pose_config(params),

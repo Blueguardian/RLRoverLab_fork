@@ -12,10 +12,10 @@ INSTALL_REQUIRES = [
     "gdown",
     # devices
     "hidapi",
-    "skrl==1.4.1",
+    "skrl==1.4.3",
     "wandb",
     "opencv-python",
-    "isaaclab==2.0.1",
+    "isaaclab==2.1.0",
     "ruamel.yaml",
     "torchvision"
 ]
