@@ -16,12 +16,14 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg  # noqa: F401
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
-from isaaclab.sim import PhysxCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns, TiledCameraCfg, TiledCamera, Camera, CameraCfg, RayCasterCamera, RayCasterCameraCfg
+from isaaclab.sensors.ray_caster.patterns import PinholeCameraPatternCfg
+from isaaclab.sim import PhysxCfg, RenderCfg
 from isaaclab.sim import SimulationCfg as SimCfg
 from isaaclab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise  # noqa: F401
+import torch
 
 ##
 # Scene Description
@@ -82,17 +84,49 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
     )
     # contact_sensor = None
 
-    height_scanner = RayCasterCfg(
-        # prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
-        prim_path="{ENV_REGEX_NS}/Robot/Body",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/terrain/hidden_terrain"],
-        max_distance=100.0,
-    )
+    # height_scanner = RayCasterCfg(
+    #     # prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+    #     prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+    #     offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
+    #     debug_vis=False,
+    #     mesh_prim_paths=["/World/terrain/hidden_terrain"],
+    #     max_distance=100.0,
+    # )
 
+    # raycaster_camera: RayCasterCamera = RayCasterCameraCfg(
+    #     prim_path="{ENV_REGEX_NS}/.*/Main_Body",
+    #     data_types=["distance_to_image_plane"],
+    #     offset=TiledCameraCfg.OffsetCfg(
+    #                 pos=(0.55, 0.0, 0.6),
+    #                 rot=(0.5, 0.5, -0.5, -0.5),
+    #                 convention="parent"),
+    #     max_distance=10.0,
+    #     pattern_cfg=PinholeCameraPatternCfg(focal_length=24.0, horizontal_aperture=20.955, height=112, width=112),
+    #     depth_clipping_behavior="max",
+    #     mesh_prim_paths=["/World/terrain/hidden_terrain"]
+    # )
+
+    tiled_camera: TiledCameraCfg = TiledCameraCfg(
+        # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
+        prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
+        # debug_vis=True,
+        # data_types=["rgb","depth"],
+        depth_clipping_behavior='max',
+        data_types=["rgb", "depth"],
+        width=100, height=100,
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.00, focus_distance=400.0,
+            horizontal_aperture=40.955, clipping_range=(0.1, 10.0)
+        ),
+        # history_length=0,
+        offset=TiledCameraCfg.OffsetCfg(
+            pos=(0.55, 0.0, 0.6),
+            rot=(0.5, 0.5, -0.5, -0.5),
+            convention="parent"
+        )
+    )
 
 @configclass
 class ActionsCfg:
@@ -118,20 +152,39 @@ class ObservationCfg:
             },
             scale=1 / math.pi,
         )
-        angle_diff = ObsTerm(
-            func=mdp.angle_diff,
+        relative_goal_orientation = ObsTerm(
+            func=mdp.relative_orientation,
             params={"command_name": "target_pose"},
             scale=1 / math.pi
         )
-        height_scan = ObsTerm(
-            func=mdp.height_scan_rover,
-            scale=1,
-            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        # height_scan = ObsTerm(
+        #     func=mdp.height_scan_rover,
+        #     scale=1,
+        #     params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        # )
+
+        camera_rgb = ObsTerm(
+            func=mdp.image,
+            params={
+                "sensor_cfg": SceneEntityCfg("tiled_camera"),
+                "data_type": "rgb",}
+        )
+        camera_depth = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
+                    "data_type": "depth",
+                    }
         )
 
+        # raycaster_cam = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("raycaster_camera"),
+        #             "data_type": "RaycasterCamera"}
+        # )
+
         def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = True
+            self.enable_corruption = False
+            self.concatenate_terms = False
 
     policy: PolicyCfg = PolicyCfg()
 
@@ -160,26 +213,30 @@ class RewardsCfg:
     )
     heading_soft_contraint = RewTerm(
         func=mdp.heading_soft_contraint,
-        weight=-0.5,
+        weight=-2.0,
         params={"asset_cfg": SceneEntityCfg(name="robot")},
     )
     collision = RewTerm(
         func=mdp.collision_penalty,
-        weight=-3.0,
+        weight=-5.0,
         params={"sensor_cfg": SceneEntityCfg(
             "contact_sensor"), "threshold": 1.0},
     )
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
-        weight=-2.0,
+        weight=-1.0,
         params={"command_name": "target_pose", "threshold": 11.0},
     )
-    angle_diff = RewTerm(
+    relative_goal_orientation = RewTerm(
         func=mdp.angle_to_goal_reward,
-        weight=5.0,
+        weight=7.0,
         params={"command_name": "target_pose"},
     )
-
+    progress_to_goal = RewTerm(
+        func=mdp.forward_progress_reward,
+        weight=4.0,
+        params={"command_name": "target_pose"}
+    )
 
 @configclass
 class TerminationsCfg:
@@ -290,7 +347,11 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.height_scanner is not None:
-            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        if self.scene.tiled_camera is not None:
+            self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
+        # if self.scene.raycaster_camera is not None:
+        #     self.scene.raycaster_camera.update_period = self.sim.dt * self.decimation
+        # if self.scene.height_scanner is not None:
+        #     self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation

@@ -1,9 +1,11 @@
 from gymnasium.spaces.box import Box
+import gymnasium as gym
 from isaaclab.envs import ManagerBasedRLEnv
 
 from rover_envs.envs.navigation.learning.skrl.models import (Critic, DeterministicActor, DeterministicNeuralNetwork,
                                                              DeterministicNeuralNetworkConv, GaussianNeuralNetwork,
-                                                             GaussianNeuralNetworkConv)
+                                                             GaussianNeuralNetworkConv, GaussianNeuralNetworkConvResnet,
+                                                             DeterministicNeuralNetworkConvResnet)
 
 
 def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False):
@@ -67,36 +69,66 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
     return models
 
 
-def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
+# def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
+#     models = {}
+#     encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
+#
+#     mlp_input_size = 5
+#
+#     models["policy"] = GaussianNeuralNetworkConv(
+#         observation_space=observation_space,
+#         action_space=action_space,
+#         device=env.device,
+#         mlp_input_size=mlp_input_size,
+#         mlp_layers=[256, 160, 128],
+#         mlp_activation="leaky_relu",
+#         encoder_input_size=encoder_input_size,
+#         encoder_layers=[8, 16, 32, 64],
+#         encoder_activation="leaky_relu",
+#     )
+#     models["value"] = DeterministicNeuralNetworkConv(
+#         observation_space=observation_space,
+#         action_space=action_space,
+#         device=env.device,
+#         mlp_input_size=mlp_input_size,
+#         mlp_layers=[256, 160, 128],
+#         mlp_activation="leaky_relu",
+#         encoder_input_size=encoder_input_size,
+#         encoder_layers=[8, 16, 32, 64],
+#         encoder_activation="leaky_relu",
+#     )
+#     return models
+
+
+def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: gym.spaces.Space, action_space: Box):
     models = {}
-    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
 
-    mlp_input_size = 5
-
-    models["policy"] = GaussianNeuralNetworkConv(
+    models["policy"] = GaussianNeuralNetworkConvResnet(
         observation_space=observation_space,
         action_space=action_space,
         device=env.device,
-        mlp_input_size=mlp_input_size,
+        mlp_input_size=5,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
-        encoder_layers=[8, 16, 32, 64],
+        encoder_input_size=3,
+        encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
     )
-    models["value"] = DeterministicNeuralNetworkConv(
+
+    # Optional: implement a ResNet version of your value model later
+    models["value"] = DeterministicNeuralNetworkConvResnet(  # Still uses MLP + HeightmapEncoder for now
         observation_space=observation_space,
         action_space=action_space,
         device=env.device,
-        mlp_input_size=mlp_input_size,
+        mlp_input_size=5,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
-        encoder_layers=[8, 16, 32, 64],
+        encoder_input_size=3,
+        encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
     )
+
     return models
-
 
 def get_model_double_critic_deterministic(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}

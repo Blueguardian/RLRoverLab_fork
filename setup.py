@@ -16,7 +16,8 @@ INSTALL_REQUIRES = [
     "wandb",
     "opencv-python",
     "isaaclab==2.0.1",
-    "ruamel.yaml"
+    "ruamel.yaml",
+    "torchvision"
 ]
 
 # url=EXTENSION_TOML_DATA["package"]["repository"], # add later
