@@ -73,7 +73,7 @@ class ConvHeightmapEncoder(nn.Module):
             flatten_size = [w, h]
 
         self.conv_out_features = out_channels * flatten_size[0] * flatten_size[1]
-        features = [80, 60]
+        features = [512, 128]
 
         self.mlps = nn.ModuleList()
         in_channels = self.conv_out_features
@@ -86,7 +86,7 @@ class ConvHeightmapEncoder(nn.Module):
 
     def forward(self, x):
         # x is a flattened heightmap, reshape it to 2D
-        x#  = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
+        x = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
         for layer in self.encoder_layers:
             x = layer(x)
 
@@ -95,58 +95,30 @@ class ConvHeightmapEncoder(nn.Module):
             x = layer(x)
         return x
 
-class ImageResnet(nn.Module):
+class ResnetEncoder(nn.Module):
     def __init__(self, in_channels, encoder_features=[80, 60], encoder_activation="leaky_relu"):
         super().__init__()
         weights = ResNet18_Weights.DEFAULT
-        base_model = resnet18(weights=weights)
-
-        # Replace input conv if channels ≠ 3 (e.g., grayscale or depth)
-        if in_channels != 3:
-            self.input_conv = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
-            self.input_bn = nn.BatchNorm2d(64)
-            self.input_relu = nn.ReLU(inplace=True)
-            self.input_maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        else:
-            self.input_conv = base_model.conv1
-            self.input_bn = base_model.bn1
-            self.input_relu = base_model.relu
-            self.input_maxpool = base_model.maxpool
-
-        # Feature extractor (everything up to avgpool)
-        self.feature_extractor = nn.Sequential(
-            base_model.layer1,
-            base_model.layer2,
-            base_model.layer3,
-            base_model.layer4,
-            base_model.avgpool  # -> [B, 512, 1, 1]
-        )
-
+        self.resnet = resnet18(weights=weights, progress=True).eval()
+        self.transform = weights.transforms(antialias=True)
         self.flatten = nn.Flatten()
-        self.resnet_out_features = 512
 
-        # Optional MLP projection on top of ResNet
-        self.mlps = nn.ModuleList()
-        in_features = self.resnet_out_features
+        self.output_encoder = nn.ModuleList()
+        in_features = 1000
         for feature in encoder_features:
-            self.mlps.append(nn.Linear(in_features, feature))
-            self.mlps.append(get_activation(encoder_activation))
+            self.output_encoder.append(nn.Linear(in_features, feature))
+            self.output_encoder.append(get_activation(encoder_activation))
             in_features = feature
 
         self.out_features = encoder_features[-1]
 
     def forward(self, x):
-        x = self.input_conv(x)
-        x = self.input_bn(x)
-        x = self.input_relu(x)
-        x = self.input_maxpool(x)
+        x_transformed = torch.stack([self.transform(x[i]) for i in range(x.shape[0])], dim=0)
+        x = self.resnet(x_transformed)
+        x = self.flatten(x)
 
-        x = self.feature_extractor(x)
-        x = self.flatten(x)  # shape [B, 512]
-
-        for layer in self.mlps:
+        for layer in self.output_encoder:
             x = layer(x)
-
         return x
 
 class GaussianNeuralNetwork(GaussianMixin, BaseModel):
@@ -552,39 +524,20 @@ class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
         self.encoder_input_size = encoder_input_size
 
         in_channels = self.mlp_input_size
-        if self.obs_sizes.get("camera_rgb", None):
-            self.encoder_rgb = ImageResnet(
-                in_channels=3,
-                encoder_features=encoder_layers,
-                encoder_activation="relu"
-            )
-            self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
-            self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
-            in_channels += self.encoder_rgb.out_features
+        self.encoder_rgb = ResnetEncoder(
+            in_channels=3,
+            encoder_features=encoder_layers,
+            encoder_activation="relu"
+        )
 
-        if self.obs_sizes.get("camera_depth", None):
-            self.encoder_depth = ConvHeightmapEncoder(
-                in_channels=self.obs_sizes["camera_depth"],
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder_depth.out_features
+        in_channels += self.encoder_rgb.out_features
+        self.encoder_depth = ConvHeightmapEncoder(
+            in_channels=self.obs_sizes["camera_depth"],
+            encoder_features=encoder_layers,
+            encoder_activation=encoder_activation
+        )
+        in_channels += self.encoder_depth.out_features
 
-        if self.obs_sizes.get("raycaster_cam", None):
-            self.encoder_depthCam = ConvHeightmapEncoder(
-                in_channels=self.obs_sizes["raycaster_cam"],
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder_depthCam.out_features
-
-        if self.obs_sizes.get("raycaster", None):
-            self.encoder_raycaster = ConvHeightmapEncoder(
-                in_channels=self.obs_sizes["raycaster"],
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder_raycaster.out_features
 
         self.mlp = nn.ModuleList()
         for layer in mlp_layers:
@@ -595,73 +548,21 @@ class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
         self.mlp.append(nn.Linear(in_channels, action_space.shape[0]))
         self.mlp.append(nn.Tanh())
 
-        self.log_std_parameter = nn.Parameter(torch.zeros(action_space.shape[0]))
+        action_space = action_space.shape[0]
+        self.log_std_parameter = nn.Parameter(torch.zeros(action_space))
 
-    def normalize_image(self, x):
-        return ((x.float()/255) - self.imagenet_mean) / self.imagenet_std
-
-    def save_tensor_to_csv(self, tensor, name="tensor", out_dir="/workspace/isaac_rover/debug_tensors", env_idx=0, step=0):
-        os.makedirs(out_dir, exist_ok=True)
-
-        # Convert to CPU + NumPy
-        tensor = tensor.detach().cpu()
-        np_tensor = tensor.numpy()
-
-        # Save flattened version
-        flat_path = os.path.join(out_dir, f"{name}_env{env_idx}_step{step}_flat.csv")
-        np.savetxt(flat_path, np_tensor.flatten(), delimiter=",", fmt="%.6f")
-
-        # If it's 2D or 3D (like depth or image channels), save shape-preserving CSV
-        if np_tensor.ndim == 2:
-            shape_path = os.path.join(out_dir, f"{name}_env{env_idx}_step{step}_matrix.csv")
-            np.savetxt(shape_path, np_tensor, delimiter=",", fmt="%.6f")
-        elif np_tensor.ndim == 3:
-            for i, channel in enumerate(np_tensor):
-                ch_path = os.path.join(out_dir, f"{name}_env{env_idx}_step{step}_ch{i}.csv")
-                np.savetxt(ch_path, channel, delimiter=",", fmt="%.6f")
-
-    def save_rgb_depth(self, rgb_tensor, depth_tensor, step_env=0, env_idx=0, out_dir="/workspace/isaac_rover/debug_images"):
-        os.makedirs(out_dir, exist_ok=True)
-
-        # ---- RGB ----
-        print(f"RGB stats — min: {rgb_tensor.min()}, max: {rgb_tensor.max()}, dtype: {rgb_tensor.dtype}")
-        rgb_tensor = rgb_tensor[env_idx] / 255
-        # rgb_tensor = rgb_tensor[env_idx].to(torch.uint8)
-        rgb = rgb_tensor.detach().to("cpu")
-        rgb_image = to_pil_image(rgb)
-        rgb_image.save(f"{out_dir}/rgb_step{step_env}_env{env_idx}.png")
-
-        # ---- Depth ----
-        print(f"RGB stats — min: {depth_tensor.min()}, max: {depth_tensor.max()}, dtype: {depth_tensor.dtype}")
-        depth = depth_tensor[env_idx].detach().to("cpu").squeeze(0)  # Remove channel if 1xHxW
-        depth = (depth - depth.min()) / (depth.max() - depth.min() + 1e-6)  # Normalize to 0-1
-        depth_image = to_pil_image(depth)
-        depth_image.save(f"{out_dir}/depth_step{step_env}_env{env_idx}.png")
 
     def compute(self, states, role="actor"):
-        # Reform the observation space TODO: Check for correct order with rgb
         obs_space = self.tensor_to_space(states["states"], self.observation_space)
 
         # Extract the observations
         depth = obs_space["camera_depth"]
-        # depth = obs_space["camera_depth"]
         proprioceptive_obs = torch.cat([obs_space["distance"], obs_space["heading"], obs_space["relative_goal_orientation"], obs_space["actions_taken"]], dim=1)
         rgb = obs_space["camera_rgb"]
-        rgb_normrect = self.normalize_image(rgb)
-        rgb_features = self.encoder_rgb(rgb_normrect)  # (B, 60)
-        # depth_features = self.encoder_depth(depth.flatten(start_dim=1))
+        rgb_features = self.encoder_rgb(rgb)
         depth_features = self.encoder_depth(depth)
 
-        # DEBUG output image and depth image (greyscale)
-        if self.debug_counter % 500 == 0:
-            self.save_rgb_depth(rgb, depth, step_env=self.debug_counter)
-            # self.save_tensor_to_csv(rgb_normrect, "rgb_normrect", step=self.debug_counter)
-            # self.save_tensor_to_csv(rgb_features, "rgb_features", step=self.debug_counter)
-            # self.save_tensor_to_csv(depth_features, "depth_features", step=self.debug_counter)
-        self.debug_counter += 1
-
         x = torch.cat([rgb_features, depth_features, proprioceptive_obs], dim=1)
-        # x = torch.cat([depth_features, proprioceptive_obs], dim=1)
         for i, layer in enumerate(self.mlp):
             x = layer(x)
 
@@ -699,78 +600,40 @@ class DeterministicNeuralNetworkConvResnet(DeterministicMixin, BaseModel):
         self.encoder_input_size = encoder_input_size
 
         in_channels = self.mlp_input_size
-        if self.obs_sizes.get("camera_rgb", None):
-            self.encoder_rgb = ImageResnet(
-                in_channels=3,
-                encoder_features=encoder_layers,
-                encoder_activation="relu"
-            )
-            in_channels += self.encoder_rgb.out_features
+        self.encoder_rgb = ResnetEncoder(
+            in_channels=3,
+            encoder_features=encoder_layers,
+            encoder_activation="relu"
+        )
+        in_channels += self.encoder_rgb.out_features
 
-        if self.obs_sizes.get("camera_depth", None):
-            self.encoder_depth = ConvHeightmapEncoder(
-                in_channels=self.obs_sizes["camera_depth"],
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder_depth.out_features
-
-        if self.obs_sizes.get("raycaster_cam", None):
-            self.encoder_depthCam = ConvHeightmapEncoder(
-                in_channels=self.obs_sizes["raycaster_cam"],
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder_depthCam.out_features
-
-        if self.obs_sizes.get("raycaster", None):
-            self.encoder_raycaster = ConvHeightmapEncoder(
-                in_channels=self.obs_sizes["raycaster"],
-                encoder_features=encoder_layers,
-                encoder_activation=encoder_activation
-            )
-            in_channels += self.encoder_raycaster.out_features
-
-        self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
-        self.register_buffer("imagenet_std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        self.encoder_depth = ConvHeightmapEncoder(
+            in_channels=self.obs_sizes["camera_depth"],
+            encoder_features=encoder_layers,
+            encoder_activation=encoder_activation
+        )
+        in_channels += self.encoder_depth.out_features
 
         self.mlp = nn.ModuleList()
         for layer in mlp_layers:
             self.mlp.append(nn.Linear(in_channels, layer))
             self.mlp.append(get_activation(mlp_activation))
             in_channels = layer
-        self.debug_counter = 0
         self.mlp.append(nn.Linear(in_channels, 1))
 
-    def normalize_image(self, x):
-        return ((x.float() / 255) - self.imagenet_mean) / self.imagenet_std
-
     def compute(self, states, role="value"):
-        # Reform the observation space TODO: Check for correct order with rgb
         obs_space = self.tensor_to_space(states["states"], self.observation_space)
 
         # Extract the observations
+        rgb = obs_space["camera_rgb"]
         depth = obs_space["camera_depth"]
-        # depth = obs_space["camera_depth"]
         proprioceptive_obs = torch.cat(
             [obs_space["distance"], obs_space["heading"], obs_space["relative_goal_orientation"], obs_space["actions_taken"]],
             dim=1)
-        rgb = obs_space["camera_rgb"]
-        rgb_normrect = self.normalize_image(rgb)
-        rgb_features = self.encoder_rgb(rgb_normrect)  # (B, 60)
-        # depth_features = self.encoder_depth(depth.flatten(start_dim=1))
+        rgb_features = self.encoder_rgb(rgb)
         depth_features = self.encoder_depth(depth)
 
-        # DEBUG output image and depth image (greyscale)
-        # if self.debug_counter % 500 == 0:
-        #     self.save_rgb_depth(rgb, depth, step_env=self.debug_counter)
-        #     self.save_tensor_to_csv(rgb_normrect, "rgb_normrect", step=self.debug_counter)
-        #     self.save_tensor_to_csv(rgb_features, "rgb_features", step=self.debug_counter)
-        #     self.save_tensor_to_csv(depth_features, "depth_features", step=self.debug_counter)
-        # self.debug_counter += 1
-
         x = torch.cat([rgb_features, depth_features, proprioceptive_obs], dim=1)
-        # x = torch.cat([depth_features, proprioceptive_obs], dim=1)
         for i, layer in enumerate(self.mlp):
             x = layer(x)
 

@@ -36,10 +36,11 @@ from rover_envs.envs.navigation.utils.terrains.commands_cfg import TerrainBasedP
 # from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommandCustom  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import RoverTerrainImporter  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommand  # noqa: F401
+from rover_envs.envs.navigation.mdp.curriculums import gradual_change_reward_weight
 
 
 @configclass
-class RoverSceneCfg(DebugTerrainSceneCfg):
+class RoverSceneCfg(MarsTerrainSceneCfg):
     """
     Rover Scene Configuration
 
@@ -117,8 +118,8 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
         data_types=["rgb", "depth"],
         width=100, height=100,
         spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.00, focus_distance=400.0,
-            horizontal_aperture=40.955, clipping_range=(0.1, 10.0)
+            focal_length=18.00, focus_distance=400.0,
+            horizontal_aperture=32.000, clipping_range=(0.1, 10.0)
         ),
         # history_length=0,
         offset=TiledCameraCfg.OffsetCfg(
@@ -193,12 +194,12 @@ class ObservationCfg:
 class RewardsCfg:
     distance_to_target = RewTerm(
         func=mdp.distance_to_target_reward,
-        weight=5.0,
+        weight=6.0,
         params={"command_name": "target_pose"},
     )
     reached_target = RewTerm(
         func=mdp.reached_target,
-        weight=5.0,
+        weight=10.0,
         params={"command_name": "target_pose", "threshold": 0.18},
     )
     oscillation = RewTerm(
@@ -208,17 +209,17 @@ class RewardsCfg:
     )
     angle_to_target = RewTerm(
         func=mdp.angle_to_target_penalty,
-        weight=-1.5,
+        weight=-0.5,
         params={"command_name": "target_pose"},
     )
     heading_soft_contraint = RewTerm(
         func=mdp.heading_soft_contraint,
-        weight=-2.0,
+        weight=-1.5,
         params={"asset_cfg": SceneEntityCfg(name="robot")},
     )
     collision = RewTerm(
         func=mdp.collision_penalty,
-        weight=-5.0,
+        weight=-2.0,
         params={"sensor_cfg": SceneEntityCfg(
             "contact_sensor"), "threshold": 1.0},
     )
@@ -229,14 +230,14 @@ class RewardsCfg:
     )
     relative_goal_orientation = RewTerm(
         func=mdp.angle_to_goal_reward,
-        weight=7.0,
+        weight=2.0,
         params={"command_name": "target_pose"},
     )
-    progress_to_goal = RewTerm(
-        func=mdp.forward_progress_reward,
-        weight=4.0,
-        params={"command_name": "target_pose"}
-    )
+    # progress_to_goal = RewTerm(
+    #     func=mdp.forward_progress_reward,
+    #     weight=4.0,
+    #     params={"command_name": "target_pose"}
+    # )
 
 @configclass
 class TerminationsCfg:
@@ -294,10 +295,46 @@ class EventCfg:
     )
 
 
-# @configclass
-# class CurriculumCfg:
-#     """ Curriculum configuration for the task. """
-#     target_distance = CurrTerm(func=mdp.goal_distance_curriculum)
+@configclass
+class CurriculumCfg:
+    """ Curriculum configuration for the task. """
+    collision = CurrTerm(
+        func=gradual_change_reward_weight, params={"term_name": "collision",
+                                                   "min_weight": -2.0,
+                                                   "max_weight": -6.0,
+                                                   "start_step": 50000,
+                                                   "end_step": 300000}
+    )
+    far_from_target = CurrTerm(
+        func=gradual_change_reward_weight,
+        params={
+            "term_name": "far_from_target",
+            "min_weight": -0.5,
+            "max_weight": -3.0,
+            "start_step": 100_000,
+            "end_step": 300_000
+        }
+    )
+    distance_to_target = CurrTerm(
+        func=gradual_change_reward_weight,
+        params={
+            "term_name": "distance_to_target",
+            "min_weight": 12.0,
+            "max_weight": 6.0,
+            "start_step": 0,
+            "end_step": 300_000
+        }
+    )
+    angle_to_target = CurrTerm(
+        func=gradual_change_reward_weight,
+        params={
+            "term_name": "angle_to_target",
+            "min_weight": -0.05,
+            "max_weight": -0.5,
+            "start_step": 0,
+            "end_step": 150_000
+        }
+    )
 
 
 @configclass
@@ -338,7 +375,7 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     commands: CommandsCfg = CommandsCfg()
-    # curriculum: CurriculumCfg = CurriculumCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         self.sim.dt = 1 / 30.0
@@ -349,9 +386,7 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         # update sensor periods
         if self.scene.tiled_camera is not None:
             self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
-        # if self.scene.raycaster_camera is not None:
-        #     self.scene.raycaster_camera.update_period = self.sim.dt * self.decimation
-        # if self.scene.height_scanner is not None:
-        #     self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        if self.scene.height_scanner is not None:
+            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation

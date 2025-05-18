@@ -25,8 +25,9 @@ INSTALL_REQUIRES = [
 # description=EXTENSION_TOML_DATA["package"]["description"],
 # keywords=EXTENSION_TOML_DATA["package"]["keywords"],
 EXTRAS_REQUIRE = {
-    "rsl_rl": ["rsl_rl@git+https://github.com/leggedrobotics/rsl_rl.git"],
+    "rsl_rl": ["rsl-rl-lib @ git+https://github.com/leggedrobotics/rsl_rl.git"],
 }
+
 
 # cumulation of all extra-requires
 EXTRAS_REQUIRE["all"] = list(itertools.chain.from_iterable(EXTRAS_REQUIRE.values()))
@@ -40,7 +41,7 @@ setup(
     python_requires=">=3.10",
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
-    packages=["rover_envs"],
+    packages=["rover_envs", "rover_il"],
     classifiers=["Natural Language :: English", "Programming Language :: Python :: 3.10"],
     zip_safe=False,
 )

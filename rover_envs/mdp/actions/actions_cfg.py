@@ -83,6 +83,9 @@ class SkidSteeringSimpleCfg(ActionTermCfg):
     drive_order = ["FL", "FR", "RL", "RR"] # Leo_Rover
     """Name of the drive joints in the above order"""
 
+    drive_id_override = None
+    """Override for the Leo rover"""
+
 ACTION_CONFIGS = {
     "ackermann": AckermannActionCfg,
     "skidsteer": SkidSteeringSimpleCfg,

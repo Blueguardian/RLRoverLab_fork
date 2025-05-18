@@ -23,7 +23,7 @@ CONFIG_CLASSES = {}
 def post_init_gen(robot_config, articulation_cfg, action_cfg):
     """Factory function that generates a `__post_init__` method for dynamic classes."""
     def __post_init__(self):
-        super(self.__class__, self).__post_init__()  # ✅ This now works correctly
+        super(self.__class__, self).__post_init__()
         self.scene.robot = articulation_cfg
         self.actions.actions = action_cfg
 

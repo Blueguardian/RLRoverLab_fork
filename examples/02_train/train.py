@@ -20,9 +20,22 @@ parser.add_argument("--task", type=str, default="AAURoverEnvSimple-v0", help="Na
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint to resume training.")
+parser.add_argument("--dagger", action="store_true",
+                    help="Run the imitation‑learning DAgger pipeline "
+                         "instead of the default SKRL RL training.")
+
+parser.add_argument("--expert", type=str, default=None,
+                    help="Absolute or relative path to the expert checkpoint "
+                         "(required when you pass --dagger). "
+                         "• .zip  → SB3 checkpoint is loaded directly\n"
+                         "• .pt   → raw SKRL checkpoint is auto‑converted "
+                         "to SB3 on‑the‑fly.")
 
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
+
+if args_cli.dagger and args_cli.expert is None:
+    parser.error("--expert <checkpoint> must be provided when using --dagger")
 
 # always enable cameras to record video
 if args_cli.video:
@@ -61,7 +74,11 @@ def log_setup(experiment_cfg, env_cfg, agent):
         Copied from the Isaac Lab framework.
     """
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
+    log_root_path = None
+    if args_cli.dagger:
+        log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
+    else:
+        log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
 
@@ -124,11 +141,13 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 from skrl.trainers.torch import SequentialTrainer  # noqa: E402
 from skrl.utils import set_seed  # noqa: E402, F401
 
-import rover_envs.assets.robots  # noqa: E402, F401
 # Import agents
 from rover_envs.envs.navigation.learning.skrl import get_agent  # noqa: E402
 from rover_envs.utils.config import parse_skrl_cfg  # noqa: E402
-
+if args_cli.dagger:
+    import rover_il.agent.robots #noqa: E402, F401
+else:
+    import rover_envs.assets.robots  # noqa: E402, F401
 
 def train():
     args_cli_seed = args_cli.seed if args_cli.seed is not None else random.randint(0, 100000000)
@@ -141,6 +160,28 @@ def train():
 
     # Create the environment
     render_mode = "rgb_array" if args_cli.video else None
+
+    if args_cli.dagger:
+        print("[INFO] Using dagger")
+
+        from rover_il.DAgger.DAggerTrainer import DataAggregationTrainer
+        from rover_il.DAgger.TeacherPolicyConverter import DAggerPolicyExpert
+
+        env_cfg = parse_env_cfg(args_cli.task, device="cuda:0" if not args_cli.cpu else "cpu",
+                                num_envs=args_cli.num_envs)
+        env = gym.make(args_cli.task, cfg=env_cfg, viewport=args_cli.video, render_mode=render_mode)
+        env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
+
+        expert = DAggerPolicyExpert(env, args_cli.expert)
+        trainer = DataAggregationTrainer(expert.env, expert.teacher)
+
+        trainer.train()
+        # Clean up simulation and exit
+        env.close()
+        simulation_app.close()
+        return
+
+
     env = gym.make(args_cli.task, cfg=env_cfg, viewport=args_cli.video, render_mode=render_mode)
     # Check if video recording is enabled
     env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
@@ -171,6 +212,8 @@ def train():
         # "linear_obs": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["linear_obs"]),
         "actions_taken": gym.spaces.Box(low=-1.0, high=1.0, shape=term_shape_map["actions"]),
     })
+
+
 
     # exit()
     trainer_cfg = experiment_cfg["trainer"]

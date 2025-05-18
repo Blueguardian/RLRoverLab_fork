@@ -1,0 +1,67 @@
+# ═══════════════════════════════════════════════════════════════════════
+# AGENT CONFIGURATION FILE
+# Describes robot kinematics, joints, actuators, initial state
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────
+# Metadata
+# ─────────────────────────────────────────────
+name: roburoc
+version: 0
+robot_model_path: /RobuROC4/RobuROC4.usd
+controller_config: skidsteer
+
+# ─────────────────────────────────────────────
+# Controller Parameters
+# ─────────────────────────────────────────────
+controller:
+  asset_name: robot
+
+  track_width: 0.690
+  wheel_radius: 0.290
+
+  drive_joint_names: [".*Drive_Joint"]
+
+  offset: 0.0
+  scale: [3.0, 3.0]
+
+# ─────────────────────────────────────────────
+# Joint Actuator Configuration
+# ─────────────────────────────────────────────
+joints:
+  base_drive:
+    joint_names_expr: [".*Drive_Joint"]
+    velocity_limit: 6.0
+    effort_limit: 1000.0
+    stiffness: 30.0
+    damping: 300.0
+
+# ─────────────────────────────────────────────
+# Physics Properties
+# ─────────────────────────────────────────────
+collision_properties:
+  contact_offset: 0.04
+  rest_offset: 0.01
+
+rigidBody_properties:
+  max_linear_velocity: 5.0
+  max_angular_velocity: 80.0
+  max_depenetration_velocity: 0.3
+  disable_gravity: False
+
+simulation_properties:
+  self_collision: False
+  solver_position_iteration_count: 32
+  solver_velocity_iteration_count: 4
+
+# ─────────────────────────────────────────────
+# Initial Pose Configuration
+# ─────────────────────────────────────────────
+pose_config:
+  init_pose: [0.0, 0.0, 0.0]
+
+  joint_pose:
+
+    velocity_config:
+      names: [".*Drive_Joint"]
+      values: [0.0, 0.0]

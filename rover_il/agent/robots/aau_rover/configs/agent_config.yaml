@@ -1,0 +1,82 @@
+# ═══════════════════════════════════════════════════════════════════════
+# AGENT CONFIGURATION FILE
+# Describes robot kinematics, joints, actuators, initial state
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────
+# Metadata
+# ─────────────────────────────────────────────
+name: AAUMarsRover
+version: 0
+robot_model_path: /aau_rover/Mars_Rover.usd
+controller_config: ackermann
+
+# ─────────────────────────────────────────────
+# Controller Parameters
+# ─────────────────────────────────────────────
+controller:
+  asset_name: robot                              # Asset name (No reason to change)
+  wheelbase_length: 0.849                         # [meters] Distance between front & rear wheels
+  middle_wheel_distance: 0.849                   # [meters] Distance between middle wheels
+  rear_and_front_wheel_distance: 0.77             # [meters] Distance between front & rear wheels
+  wheel_radius: 0.1                               # [meters] Wheel radius
+  min_steering_radius: 0.8                       # [meters] Minimum turning radius
+  steering_joint_names: [ ".*Steer_Revolute" ]      # Steering joints (regex supported)
+  drive_joint_names: [ ".*Drive_Continuous" ]       # Drive joints (regex supported)
+  offset: 0.0135                                    # Default: 0.0
+  scale: [ 1.0, 1.0 ]                                # Default: [0.0, 0.0]
+  steering_order: [ "FL", "FR", "RL", "RR" ]        # Steering joint order
+  drive_order: [ "FL", "FR", "CL", "CR", "RL", "RR" ]
+
+# ─────────────────────────────────────────────
+# Joint Actuator Configuration
+# ─────────────────────────────────────────────
+joints:
+    base_drive:
+      joint_names_expr: [".*Drive_Continuous"]
+      velocity_limit: 6 # [m/s]
+      effort_limit: 12
+      stiffness: 100.0
+      damping: 4000.0
+    base_steering:
+      joint_names_expr: [".*Steer_Revolute"]
+      velocity_limit: 6
+      effort_limit: 12
+      stiffness: 8000.0
+      damping: 1000.0
+    passive_joints:
+      joint_names_expr: [".*(Rocker|Differential)_Revolute"]
+      velocity_limit: 6
+      effort_limit: 0
+      stiffness: 0.0
+      damping: 0.0
+
+# ─────────────────────────────────────────────
+# Physics Properties
+# ─────────────────────────────────────────────
+collision_properties: # Properties related to collision with the robot
+    contact_offset: 0.04                       # [meters] Offset considered contact with other object
+    rest_offset: 0.01                           # [meters] Offset considered rest at contact with object
+rigidBody_properties: # Properties of the rigid body
+    max_linear_velocity: 1.5                   # [m/s]
+    max_angular_velocity: 4.0                  # [rad/s]
+    max_depenetration_velocity: 0.5            # [m/s] makes collision response slower
+    disable_gravity: false                     # [Bool] whether to disable gravity for the body
+simulation_properties: # Simulation properties
+    self_collision: false                      # Allow collision of the individual parts of the robot
+    solver_position_iteration_count: 32        # Number of iterations when solving for position
+    solver_velocity_iteration_count: 4         # Number of iterations when solving for velocity
+
+# ─────────────────────────────────────────────
+# Initial Pose Configuration
+# ─────────────────────────────────────────────
+
+pose_config:
+    init_pose: [0.0, 0.0, 0.0]                 # [m] Initial pose
+    joint_pose: # initial joint poses
+      pose_config: # Pose
+        names: [".*Steer_Revolute"]            # Names of joints
+        values: [0.0]                           # and their initial velocities
+      velocity_config: # Velocity
+        names: [".*Steer_Revolute", ".*Drive_Continuous"] # Names of joints
+        values: [0.0, 0.0]                      # and their initial velocities

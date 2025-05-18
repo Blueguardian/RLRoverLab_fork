@@ -1,0 +1,109 @@
+# ═══════════════════════════════════════════════════════════════════════
+# IL ROVER LEARNING CONFIGURATION
+# Defines environment config for either student or teacher
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────
+# ▶ Meta
+# ─────────────────────────────────────────────
+task_name: aau_rover_simple
+algorithm: PPO
+modes: [DAgger, BC]
+
+# ─────────────────────────────────────────────
+# ▶ Simulation Control
+# ─────────────────────────────────────────────
+simulation:
+  dt: 0.033
+  decimation: 6
+  episode_length_s: 150
+
+# ─────────────────────────────────────────────
+# ▶ Observations (per agent)
+# ─────────────────────────────────────────────
+observations:
+  actions:
+    student: { enabled: true }
+    teacher: { enabled: true }
+
+  distance:
+    student: { enabled: true, scale: 0.11 }
+    teacher: { enabled: true, scale: 0.11 }
+
+  heading:
+    student: { enabled: true, scale: 0.318 }
+    teacher: { enabled: true, scale: 0.318 }
+
+  angle_diff:
+    student: { enabled: true, scale: 0.318 }
+    teacher: { enabled: true, scale: 0.318 }
+
+  height_scan:
+    student: { enabled: false }
+    teacher: { enabled: true, scale: 1.0 }
+
+  camera_rgb:
+    student: { enabled: true, noise: "gaussian" }
+    teacher: { enabled: false }
+
+  camera_depth:
+    student: { enabled: true, noise: "redwood" }
+    teacher: { enabled: false }
+
+# ─────────────────────────────────────────────
+# ▶ Rewards (flat — applies to current agent only)
+# ─────────────────────────────────────────────
+rewards:
+  distance_to_target:
+    enabled: true
+    weight: 6.0
+
+  reached_target:
+    enabled: true
+    weight: 10.0
+    threshold: 0.18
+
+  oscillation:
+    enabled: true
+    weight: -0.05
+
+  angle_to_target:
+    enabled: true
+    weight: -0.5
+
+  heading_soft_contraint:
+    enabled: true
+    weight: -1.5
+
+  collision:
+    enabled: true
+    weight: -2.0
+    threshold: 1.0
+
+  far_from_target:
+    enabled: true
+    weight: -1.0
+    threshold: 11.0
+
+  relative_goal_orientation:
+    enabled: true
+    weight: 2.0
+
+# ─────────────────────────────────────────────
+# ▶ Terminations (flat)
+# ─────────────────────────────────────────────
+terminations:
+  time_limit:
+    enabled: true
+
+  is_success:
+    enabled: true
+    threshold: 0.18
+
+  far_from_target:
+    enabled: true
+    threshold: 11.0
+
+  collision:
+    enabled: true
+    threshold: 1.0

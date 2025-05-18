@@ -4,7 +4,6 @@
 
 name: AAUMarsRoverSimple, # Will be used in future update
 robot_model_path: /aau_rover_simple/rover_instance.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
-articulation_type: RoverArticulation, # Articulation type options: RoverArticulation
 controller_config: ackermann, # Control type, options: ackermann, skidsteer or diffdrive
 
 # ───────────────────────────────────────────────────────────────
