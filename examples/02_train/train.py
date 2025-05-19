@@ -164,20 +164,40 @@ def train():
     if args_cli.dagger:
         print("[INFO] Using dagger")
 
-        from rover_il.DAgger.DAggerTrainer import DataAggregationTrainer
-        from rover_il.DAgger.TeacherPolicyConverter import DAggerPolicyExpert
+        from rover_il.DAgger.dagger_train import build_dagger
+        from rover_il.DAgger.build_envs import make_shared_vecenv
+        from rover_il.DAgger.expert_policy import SkrlExpertPolicy
 
         env_cfg = parse_env_cfg(args_cli.task, device="cuda:0" if not args_cli.cpu else "cpu",
                                 num_envs=args_cli.num_envs)
-        env = gym.make(args_cli.task, cfg=env_cfg, viewport=args_cli.video, render_mode=render_mode)
-        env = video_record(env, log_dir, args_cli.video, args_cli.video_length, args_cli.video_interval)
 
-        expert = DAggerPolicyExpert(env, args_cli.expert)
-        trainer = DataAggregationTrainer(expert.env, expert.teacher)
+        # build the shared vec envs
+        vec_student, vec_expert = make_shared_vecenv(
+            args_cli.task,
+            cfg=env_cfg,
+            video=args_cli.video
+        )
 
-        trainer.train()
+        expert_policy = SkrlExpertPolicy(
+            checkpoint=args_cli.expert,
+            obs_space=vec_expert.observation_space,
+            act_space=vec_expert.action_space,
+            key_slices=vec_expert.key_slices,
+        )
+
+        dagger, student_alg, run = build_dagger(
+            vec_student=vec_student,
+            vec_expert=vec_expert,
+            expert_policy=expert_policy,
+            logdir=log_dir,
+        )
+
+        print("[DAgger] collecting + training …")
+        dagger.train(total_timesteps=100_000)
+        student_alg.save(os.path.join(log_dir, "student_final"))
         # Clean up simulation and exit
-        env.close()
+        vec_student.close()
+        vec_expert.close()
         simulation_app.close()
         return
 

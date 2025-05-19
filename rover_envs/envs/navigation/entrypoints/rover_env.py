@@ -1,5 +1,6 @@
 
 import torch
+import numpy as np
 from isaaclab.envs.common import VecEnvObs
 from isaaclab.envs.manager_based_rl_env import ManagerBasedRLEnv
 from isaaclab.terrains import TerrainImporter
@@ -66,6 +67,9 @@ class RoverEnv(ManagerBasedRLEnv):
         # action = torch.zeros_like(action)
         # action[0][:] = 0
         # action[1][:] = 10
+        if type(action) == np.ndarray:
+            action = torch.from_numpy(action)
+        print(action)
         self.action_manager.process_action(action)
         # perform physics stepping
         for _ in range(self.cfg.decimation):

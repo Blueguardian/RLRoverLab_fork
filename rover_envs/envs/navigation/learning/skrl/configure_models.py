@@ -69,35 +69,35 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
     return models
 
 
-# def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
-#     models = {}
-#     encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
-#
-#     mlp_input_size = 5
-#
-#     models["policy"] = GaussianNeuralNetworkConv(
-#         observation_space=observation_space,
-#         action_space=action_space,
-#         device=env.device,
-#         mlp_input_size=mlp_input_size,
-#         mlp_layers=[256, 160, 128],
-#         mlp_activation="leaky_relu",
-#         encoder_input_size=encoder_input_size,
-#         encoder_layers=[8, 16, 32, 64],
-#         encoder_activation="leaky_relu",
-#     )
-#     models["value"] = DeterministicNeuralNetworkConv(
-#         observation_space=observation_space,
-#         action_space=action_space,
-#         device=env.device,
-#         mlp_input_size=mlp_input_size,
-#         mlp_layers=[256, 160, 128],
-#         mlp_activation="leaky_relu",
-#         encoder_input_size=encoder_input_size,
-#         encoder_layers=[8, 16, 32, 64],
-#         encoder_activation="leaky_relu",
-#     )
-#     return models
+def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
+    models = {}
+    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
+
+    mlp_input_size = 5
+
+    models["policy"] = GaussianNeuralNetworkConv(
+        observation_space=observation_space,
+        action_space=action_space,
+        device=env.device,
+        mlp_input_size=mlp_input_size,
+        mlp_layers=[256, 160, 128],
+        mlp_activation="leaky_relu",
+        encoder_input_size=encoder_input_size,
+        encoder_layers=[8, 16, 32, 64],
+        encoder_activation="leaky_relu",
+    )
+    models["value"] = DeterministicNeuralNetworkConv(
+        observation_space=observation_space,
+        action_space=action_space,
+        device=env.device,
+        mlp_input_size=mlp_input_size,
+        mlp_layers=[256, 160, 128],
+        mlp_activation="leaky_relu",
+        encoder_input_size=encoder_input_size,
+        encoder_layers=[8, 16, 32, 64],
+        encoder_activation="leaky_relu",
+    )
+    return models
 
 
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: gym.spaces.Space, action_space: Box):

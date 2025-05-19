@@ -17,7 +17,9 @@ INSTALL_REQUIRES = [
     "opencv-python",
     "isaaclab==2.0.1",
     "ruamel.yaml",
-    "torchvision"
+    "torchvision",
+    "stable_baselines3",
+    "imitation"
 ]
 
 # url=EXTENSION_TOML_DATA["package"]["repository"], # add later
