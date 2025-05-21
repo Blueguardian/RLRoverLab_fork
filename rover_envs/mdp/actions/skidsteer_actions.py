@@ -96,8 +96,8 @@ class SkidSteerAction(ActionTerm):
 def skid_steer_simple(vx, omega, cfg, device):
     """Compute skid-steering wheel velocities."""
     #
-    # vx[:][:] = 0
-    # omega[:][:] = -2
+    vx[:][:] = 0
+    omega[:][:] = -1
 
     # Instance configuration variables
     track_width = cfg.track_width  # Track width (m)
@@ -105,10 +105,10 @@ def skid_steer_simple(vx, omega, cfg, device):
 
     lin_vel = torch.abs(vx)
 
-    vel_left = vx - (omega * track_width / 2) / wheel_r
-    vel_right = vx + (omega * track_width / 2) / wheel_r
+    vel_left = (vx - omega * track_width / 2) / wheel_r
+    vel_right = (vx + omega * track_width / 2) / wheel_r
 
-    # wheel_vel = torch.stack([vel_left, vel_right, vel_left, vel_right], dim=1)  # Order: FL, RL, FL, RR -> Leo rover
-    wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1) # Order FL, FR, RL, RR -> Summit
+    wheel_vel = torch.stack([vel_left, vel_right, vel_left, vel_right], dim=1)  # Order: FL, RL, FL, RR -> Leo rover
+    # wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1) # Order FL, FR, RL, RR -> Summit
 
     return wheel_vel

@@ -40,7 +40,7 @@ from rover_envs.envs.navigation.mdp.curriculums import gradual_change_reward_wei
 
 
 @configclass
-class RoverSceneCfg(MarsTerrainSceneCfg):
+class RoverSceneCfg(DebugTerrainSceneCfg):
     """
     Rover Scene Configuration
 
@@ -96,38 +96,25 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
         max_distance=100.0,
     )
 
-    # raycaster_camera: RayCasterCamera = RayCasterCameraCfg(
-    #     prim_path="{ENV_REGEX_NS}/.*/Main_Body",
-    #     data_types=["distance_to_image_plane"],
+    # tiled_camera: TiledCameraCfg = TiledCameraCfg(
+    #     # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
+    #     prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
+    #     # debug_vis=True,
+    #     # data_types=["rgb","depth"],
+    #     depth_clipping_behavior='max',
+    #     data_types=["rgb", "depth"],
+    #     width=100, height=100,
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #         focal_length=18.00, focus_distance=400.0,
+    #         horizontal_aperture=32.000, clipping_range=(0.1, 10.0)
+    #     ),
+    #     # history_length=0,
     #     offset=TiledCameraCfg.OffsetCfg(
-    #                 pos=(0.55, 0.0, 0.6),
-    #                 rot=(0.5, 0.5, -0.5, -0.5),
-    #                 convention="parent"),
-    #     max_distance=10.0,
-    #     pattern_cfg=PinholeCameraPatternCfg(focal_length=24.0, horizontal_aperture=20.955, height=112, width=112),
-    #     depth_clipping_behavior="max",
-    #     mesh_prim_paths=["/World/terrain/hidden_terrain"]
+    #         pos=(0.55, 0.0, 0.6),
+    #         rot=(0.5, 0.5, -0.5, -0.5),
+    #         convention="parent"
+    #     )
     # )
-
-    tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
-        prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
-        # debug_vis=True,
-        # data_types=["rgb","depth"],
-        depth_clipping_behavior='max',
-        data_types=["rgb", "depth"],
-        width=100, height=100,
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=18.00, focus_distance=400.0,
-            horizontal_aperture=32.000, clipping_range=(0.1, 10.0)
-        ),
-        # history_length=0,
-        offset=TiledCameraCfg.OffsetCfg(
-            pos=(0.55, 0.0, 0.6),
-            rot=(0.5, 0.5, -0.5, -0.5),
-            convention="parent"
-        )
-    )
 
 @configclass
 class ActionsCfg:
@@ -158,24 +145,24 @@ class ObservationCfg:
             params={"command_name": "target_pose"},
             scale=1 / math.pi
         )
-        # height_scan = ObsTerm(
-        #     func=mdp.height_scan_rover,
-        #     scale=1,
-        #     params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
-        # )
+        height_scan = ObsTerm(
+            func=mdp.height_scan_rover,
+            scale=1,
+            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        )
 
-        camera_rgb = ObsTerm(
-            func=mdp.image,
-            params={
-                "sensor_cfg": SceneEntityCfg("tiled_camera"),
-                "data_type": "rgb",}
-        )
-        camera_depth = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
-                    "data_type": "depth",
-                    }
-        )
+        # camera_rgb = ObsTerm(
+        #     func=mdp.image,
+        #     params={
+        #         "sensor_cfg": SceneEntityCfg("tiled_camera"),
+        #         "data_type": "rgb",}
+        # )
+        # camera_depth = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
+        #             "data_type": "depth",
+        #             }
+        # )
 
         # raycaster_cam = ObsTerm(
         #     func=mdp.image,
@@ -185,7 +172,7 @@ class ObservationCfg:
 
         def __post_init__(self):
             self.enable_corruption = False
-            self.concatenate_terms = False
+            self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
 
@@ -298,43 +285,43 @@ class EventCfg:
 @configclass
 class CurriculumCfg:
     """ Curriculum configuration for the task. """
-    collision = CurrTerm(
-        func=gradual_change_reward_weight, params={"term_name": "collision",
-                                                   "min_weight": -2.0,
-                                                   "max_weight": -6.0,
-                                                   "start_step": 50000,
-                                                   "end_step": 300000}
-    )
-    far_from_target = CurrTerm(
-        func=gradual_change_reward_weight,
-        params={
-            "term_name": "far_from_target",
-            "min_weight": -0.5,
-            "max_weight": -3.0,
-            "start_step": 100_000,
-            "end_step": 300_000
-        }
-    )
-    distance_to_target = CurrTerm(
-        func=gradual_change_reward_weight,
-        params={
-            "term_name": "distance_to_target",
-            "min_weight": 12.0,
-            "max_weight": 6.0,
-            "start_step": 0,
-            "end_step": 300_000
-        }
-    )
-    angle_to_target = CurrTerm(
-        func=gradual_change_reward_weight,
-        params={
-            "term_name": "angle_to_target",
-            "min_weight": -0.05,
-            "max_weight": -0.5,
-            "start_step": 0,
-            "end_step": 150_000
-        }
-    )
+    # collision = CurrTerm(
+    #     func=gradual_change_reward_weight, params={"term_name": "collision",
+    #                                                "min_weight": -2.0,
+    #                                                "max_weight": -6.0,
+    #                                                "start_step": 50000,
+    #                                                "end_step": 300000}
+    # )
+    # far_from_target = CurrTerm(
+    #     func=gradual_change_reward_weight,
+    #     params={
+    #         "term_name": "far_from_target",
+    #         "min_weight": -0.5,
+    #         "max_weight": -3.0,
+    #         "start_step": 100_000,
+    #         "end_step": 300_000
+    #     }
+    # )
+    # distance_to_target = CurrTerm(
+    #     func=gradual_change_reward_weight,
+    #     params={
+    #         "term_name": "distance_to_target",
+    #         "min_weight": 12.0,
+    #         "max_weight": 6.0,
+    #         "start_step": 0,
+    #         "end_step": 300_000
+    #     }
+    # )
+    # angle_to_target = CurrTerm(
+    #     func=gradual_change_reward_weight,
+    #     params={
+    #         "term_name": "angle_to_target",
+    #         "min_weight": -0.05,
+    #         "max_weight": -0.5,
+    #         "start_step": 0,
+    #         "end_step": 150_000
+    #     }
+    # )
 
 
 @configclass
@@ -384,8 +371,8 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.tiled_camera is not None:
-            self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
+        # if self.scene.tiled_camera is not None:
+        #     self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
         if self.scene.height_scanner is not None:
             self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:

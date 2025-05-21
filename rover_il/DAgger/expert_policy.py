@@ -8,6 +8,14 @@ from rover_il.learning.models.skrl_models import (
     GaussianNeuralNetworkConv,
 )
 
+TEACHER_KEYS = [
+    "distance_teacher",
+    "heading_teacher",
+    "relative_goal_orientation_teacher",
+    "actions_teacher",
+    "height_scan_teacher",
+]
+
 # --------------------------------------------------------------------- #
 class SkrlExpertPolicy(BasePolicy):
     """
@@ -23,6 +31,7 @@ class SkrlExpertPolicy(BasePolicy):
         obs_space    : spaces.Box,      # flat Box
         act_space    : spaces.Box,
         key_slices   : dict[str, slice], # from FlattenPolicyObs
+        key_shapes   : dict[str, int],
         device       : str = "cuda:0",
     ):
         super().__init__(
@@ -31,6 +40,11 @@ class SkrlExpertPolicy(BasePolicy):
             features_extractor= None,
         )
         self.key_slices = key_slices     # keep mapping
+        self.key_shapes = key_shapes
+
+        print("[expert] using slices:")
+        for k in TEACHER_KEYS:
+            print(f"  {k:35s} {self.key_slices[k]}, shape: {self.key_shapes[k]}")
 
         # ------------------------------------------------------------------ #
         #  Build the original SKRL network (133-D proprio + 10201 heightmap) #

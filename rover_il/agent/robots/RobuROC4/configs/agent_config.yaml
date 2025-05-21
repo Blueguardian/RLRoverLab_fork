@@ -23,7 +23,8 @@ controller:
   drive_joint_names: [".*Drive_Joint"]
 
   offset: 0.0
-  scale: [3.0, 3.0]
+  scale: [1.0, 1.0]
+  drive_order: ["FL", "FR", "RL", "RR"]
 
 # ─────────────────────────────────────────────
 # Joint Actuator Configuration
@@ -31,9 +32,9 @@ controller:
 joints:
   base_drive:
     joint_names_expr: [".*Drive_Joint"]
-    velocity_limit: 6.0
+    velocity_limit: 8.0
     effort_limit: 1000.0
-    stiffness: 30.0
+    stiffness: 35.0
     damping: 300.0
 
 # ─────────────────────────────────────────────

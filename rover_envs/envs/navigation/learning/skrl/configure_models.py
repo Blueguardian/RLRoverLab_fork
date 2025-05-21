@@ -8,7 +8,7 @@ from rover_envs.envs.navigation.learning.skrl.models import (Critic, Determinist
                                                              DeterministicNeuralNetworkConvResnet)
 
 
-def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False):
+def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False, resnet: bool = False):
     """
     Placeholder function for getting the models.
 
@@ -25,7 +25,10 @@ def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, actio
     if agent == "PPO":
         if conv:
             return get_model_gaussian_conv(env, observation_space, action_space)
-        return get_model_gaussian(env, observation_space, action_space)
+        elif resnet:
+            return get_model_gaussian_resnet(env, observation_space, action_space)
+        elif not conv and not resnet:
+            return get_model_gaussian(env, observation_space, action_space)
     if agent == "TRPO":
         return get_model_gaussian(env, observation_space, action_space)
     if agent == "RPO":
@@ -100,7 +103,7 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
     return models
 
 
-def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: gym.spaces.Space, action_space: Box):
+def get_model_gaussian_resnet(env: ManagerBasedRLEnv, observation_space: gym.spaces.Space, action_space: Box):
     models = {}
 
     models["policy"] = GaussianNeuralNetworkConvResnet(

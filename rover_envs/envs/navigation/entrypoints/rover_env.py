@@ -69,7 +69,6 @@ class RoverEnv(ManagerBasedRLEnv):
         # action[1][:] = 10
         if type(action) == np.ndarray:
             action = torch.from_numpy(action)
-        print(action)
         self.action_manager.process_action(action)
         # perform physics stepping
         for _ in range(self.cfg.decimation):

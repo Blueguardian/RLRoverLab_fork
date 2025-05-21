@@ -76,7 +76,7 @@ def build_dagger(
     # one-liner helper for your train.py
     def run():
         print(f"[DAgger] collecting + training for {total_steps:,} steps …")
-        dagger.train(total_timesteps = total_steps)
+        dagger.train(total_timesteps = total_steps, bc_train_kwargs={"progress": True})
         path = os.path.join(logdir, "student_final")
         student_alg.save(path)
         print(f"[DAgger] student saved → {path}")

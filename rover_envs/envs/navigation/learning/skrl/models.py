@@ -86,7 +86,9 @@ class ConvHeightmapEncoder(nn.Module):
 
     def forward(self, x):
         # x is a flattened heightmap, reshape it to 2D
-        x = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
+        if x.ndim == 2 and x.shape[1] == self.heightmap_size ** 2:
+            x = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
+        # x = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
         for layer in self.encoder_layers:
             x = layer(x)
 

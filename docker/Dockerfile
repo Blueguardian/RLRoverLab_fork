@@ -23,9 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Install this Isaac Lab and SKRL
-RUN ${ISAAC_SIM_PATH}/python.sh -m pip install --upgrade --pre torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/nightly/cu128 && \
-    ${ISAAC_SIM_PATH}/python.sh -m pip install isaaclab==2.0.2 skrl==1.4.1 gym
+RUN ${ISAAC_SIM_PATH}/python.sh -m pip install isaaclab==2.0.2 skrl==1.4.1 gym && ${ISAAC_SIM_PATH}/python.sh -m pip install --upgrade --pre torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/nightly/cu128
 
 
 RUN echo "alias isaaclab=${ISAAC_LAB_PATH}/isaaclab.sh" >> ${HOME}/.bashrc && \

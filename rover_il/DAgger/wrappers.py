@@ -89,7 +89,8 @@ class FlattenPolicyObs(gym.ObservationWrapper):
         # ----------------------------------------------------------------- #
         self.keys         = list(keys)
         self.key_shapes: Dict[str, Tuple[int, ...]] = {
-            k: policy_space[k].shape for k in self.keys
+            k: policy_space[k].shape[1:] if len(policy_space[k].shape) > 1 else ()
+            for k in self.keys
         }
 
         start = 0
