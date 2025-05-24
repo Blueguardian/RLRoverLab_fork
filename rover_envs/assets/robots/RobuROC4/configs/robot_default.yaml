@@ -1,3 +1,4 @@
+
 ---
 # ===============================================================
 # Configuration file for robot parameters.
@@ -62,12 +63,12 @@ controller_config: skidsteer,               # Control type, options: ackermann, 
 controller:
   {
     asset_name: robot,
-    scale: [0.75, 0.75],                  # Default: [1.0, 1.0]
-    offset: 0.0,                        # Default: 0.0
+    scale: [0.7, 1.0],                  # Default: [1.0, 1.0]
+    offset: [0.01, 0.0],                     # Default: 0.0
     track_width: 0.690,                 # [meters] Distance between left & right wheels
-    wheel_radius: 0.290,                # [meters] Wheel radius
+    wheel_radius: 0.28,              # [meters] Wheel radius
     drive_joint_names: [".*Drive_Joint"],# Names of wheel joints (regex supported)
-    # drive_order: ["FL", "FR", "RL", "RR"],
+    drive_order: ["FL", "FR", "RL", "RR"],
   }
 
 # ── Joint setup ─────────────────────────────────────────────
@@ -106,11 +107,11 @@ joints:
   {
     base_drive:
     {
-      joint_names_expr: [".*Drive_Joint"],
-      velocity_limit: 12,
-      effort_limit: 5000,
-      stiffness: 50.0,
-      damping: 400.0,
+      joint_names_expr: [ ".*Drive_Joint" ],
+      velocity_limit: 10.0,
+      effort_limit: 800,
+      stiffness: 5.0,
+      damping: 7000.0,
     },
   }
 
@@ -126,8 +127,8 @@ collision_properties: # Properties related to collision with the robot
   }
 rigidBody_properties: # Properties of the rigid body
   {
-    max_linear_velocity: 5.0,                   # [m/s]
-    max_angular_velocity: 80.0,                  # [rad/s]
+    max_linear_velocity: 8.0,                   # [m/s]
+    max_angular_velocity: 40.0,                  # [rad/s]
     max_depenetration_velocity: 0.3,            # [m/s] makes collision response slower
     disable_gravity: False,                     # [Bool] whether to disable gravity for the body
   }
@@ -155,3 +156,162 @@ pose_config:
       }
     }
   }
+
+
+#---
+## ===============================================================
+## Configuration file for robot parameters.
+## ===============================================================
+#name: roburoc,                               # Will be used in future update
+#robot_model_path: /RobuROC4/RobuROC4.usd, # relative path to robots folder e.g. /aau_rover/Mars_Rover.usd
+#controller_config: skidsteer,               # Control type, options: ackermann, skidsteer or diffdrive
+#
+## ───────────────────────────────────────────────────────────────
+## Controller Parameters Configuration
+## Depending on the selected controller type (action_cfg),
+## different parameters are required.
+## ───────────────────────────────────────────────────────────────
+#
+## ── Skid-Steering / Differential Drive Parameters ───────────
+## These parameters are used for skid-steering and differential drive vehicles.
+##
+## - scale: Scaling factor for the control inputs. Default: [1.0, 1.0]
+## - offset: Offset applied to the control inputs. Default: [0.0, 0.0]
+## - track_width: Distance between the left and right wheels [meters].
+## - wheel_radius: Radius of the wheels [meters].
+## - drive_joint_names: Names of the wheel joints (can be regex or individual).
+## - drive_order: # Ordering of drive joints, should match prim names/prefixes
+##
+## Example:
+## scale: [1.0, 1.0]          # Default: [1.0, 1.0]
+## offset: [0.0, 0.0]         # Default: [0.0, 0.0]
+## track_width: 1.0           # [meters] Distance between left & right wheels
+## wheel_radius: 1.0          # [meters] Wheel radius
+## drive_joint_names: [".*Drive_Joint"] # Names of wheel joints (regex supported)
+#
+## ── Ackermann Steering Parameters ───────────────────────────
+## These parameters are used for Ackermann-style steering vehicles.
+##
+#
+## - wheelbase_length: Distance between front and rear wheels [meters].
+## - middle_wheel_distance: Distance between middle wheels [meters].
+## - rear_and_front_wheel_distance: Distance between the rear and front wheels [meters].
+## - wheel_radius: Radius of the wheels [meters].
+## - min_steering_radius: Minimum turning radius of the vehicle [meters].
+##   If lower than this value, the vehicle will turn on the spot.
+## - steering_joint_names: Names of the steering joints (regex or individual).
+## - drive_joint_names: Names of wheel joints (regex or individual).
+## - scale: Scaling factor for the control inputs. Default: [1.0, 1.0]
+## - offset: Offset applied to the control inputs. Default: [0.0, 0.0]
+## - steering_order: Ordering of steering joints, should match prim names/prefixes.
+## - drive_order: Ordering of drive joints, should match prim names/prefixes.
+##
+## Example:
+## wheelbase_length: 1.0,                       # [meters] Distance between front & rear wheels
+## middle_wheel_distance: 1.0,                  # [meters] Distance between middle wheels
+## rear_and_front_wheel_distance: 1.0,          # [meters] Distance between front & rear wheels
+## wheel_radius: 1.0,                           # [meters] Wheel radius
+## min_steering_radius: 1.0,                    # [meters] Minimum turning radius
+## steering_joint_names: [".*Steer_Joint"],     # Steering joints (regex supported)
+## drive_joint_names: [".*Drive_Joint"],        # Drive joints (regex supported)
+## offset: [0.0, 0.0],                  # Default: [1.0, 1.0]
+## scale: [1.0, 1.0],                           # Default: [0.0, 0.0]
+## steering_order: ["FL", "FR", "RL", "RR"],    # Steering joint order
+## drive_order: ["FL", "FR", "CL", "CR", "RL", "RR"], # Drive joint order]
+#
+#controller:
+#  {
+#    asset_name: robot,
+#    scale: [0.25, 2.0],                  # Default: [1.0, 1.0]
+#    offset: [0.01, 0.0],                     # Default: 0.0
+#    track_width: 0.690,                 # [meters] Distance between left & right wheels
+#    wheel_radius: 0.28,              # [meters] Wheel radius
+#    drive_joint_names: [".*Drive_Joint"],# Names of wheel joints (regex supported)
+#    drive_order: ["FL", "FR", "RL", "RR"],
+#  }
+#
+## ── Joint setup ─────────────────────────────────────────────
+## Joint configuration setup
+## Depending on the types of joints on the rover model
+## this configuration can contain various types of joints
+## Ensure that it fits within the scope
+## ────────────────────────────────────────────────────────────
+#
+## ── Skid-Steering / Differential Drive Parameters ───────────
+##
+## Usual parameters for skidsteering:
+## base_drive:
+##     {
+##      joint_names_expr: [".*Drive_Continuous"],
+##      velocity_limit: 6,
+##      effort_limit: 12,
+##      stiffness: 100.0,
+##      damping: 4000.0
+##     },
+## E.g. for Leo rover passive_joints should be added too
+##     passive_joints:
+##    {
+##      joint_names_expr: [".*Bogie_Joint"],
+##      velocity_limit: 6,
+##      effort_limit: 0,
+##      stiffness: 0.0,
+##      damping: 0.0,
+##    }
+##
+## ── Ackermann Steering Parameters ───────────────────────────
+##
+#
+#
+#joints:
+#  {
+#    base_drive:
+#    {
+#      joint_names_expr: [".*Drive_Joint"],
+#      velocity_limit: 5.0,
+#      effort_limit: 4000,
+#      stiffness: 300.0,
+#      damping: 5000.0,
+#    },
+#  }
+#
+## ── Simulation parameters ───────────────────────────────────
+## Collision, rigidbody and simulation properties are all related
+## to the simulation, only tune if you have knowledge hereof.
+## ────────────────────────────────────────────────────────────
+#
+#collision_properties: # Properties related to collision with the robot
+#  {
+#    contact_offset: 0.04,                       # [meters] Offset considered contact with other object
+#    rest_offset: 0.01                           # [meters] Offset considered rest at contact with object
+#  }
+#rigidBody_properties: # Properties of the rigid body
+#  {
+#    max_linear_velocity: 5.0,                   # [m/s]
+#    max_angular_velocity: 80.0,                  # [rad/s]
+#    max_depenetration_velocity: 0.3,            # [m/s] makes collision response slower
+#    disable_gravity: False,                     # [Bool] whether to disable gravity for the body
+#  }
+#simulation_properties: # Simulation properties
+#  {
+#    self_collision: False,                      # Allow collision of the individual parts of the robot
+#    solver_position_iteration_count: 32,        # Number of iterations when solving for position
+#    solver_velocity_iteration_count: 4,         # Number of iterations when solving for velocity
+#  }
+#
+## ── Initial parameters config ────────────────────────────────────
+## Configuration of the robot and joint position and velocity at the
+## beginning of simulation, can be set for individual joints.
+## ─────────────────────────────────────────────────────────────────
+#
+#pose_config:
+#  {
+#    init_pose: [0.0, 0.0, 0.0],                 # [m] Initial pose
+#    joint_pose: # initial joint poses
+#    {
+#      velocity_config: # Velocity
+#      {
+#        names: [".*Drive_Joint"], # Names of joints
+#        values: [0.0, 0.0, 0.0, 0.0]        # and their initial velocities
+#      }
+#    }
+#  }

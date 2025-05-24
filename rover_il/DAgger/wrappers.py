@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from typing import Dict, Tuple, List
 
+
 # --------------------------------------------------------------------- #
 #  Helper: recursively turn torch.Tensor → contiguous np.ndarray        #
 # --------------------------------------------------------------------- #
@@ -74,7 +75,7 @@ class FlattenPolicyObs(gym.ObservationWrapper):
 
     def __init__(self, env: gym.Env, keys: List[str]):
         super().__init__(env)
-
+        self.counter = 0 # TODO: Remove after image extraction
         # ----------------------------------------------------------------- #
         #  Resolve inner "policy" space                                     #
         # ----------------------------------------------------------------- #
@@ -105,13 +106,11 @@ class FlattenPolicyObs(gym.ObservationWrapper):
         flat_high =  np.inf * np.ones(start, dtype=np.float32)
         self.observation_space = gym.spaces.Box(low=flat_low, high=flat_high, dtype=np.float32)
 
-    # ------------------------------------------------------------------ #
-    #  Gym API                                                           #
-    # ------------------------------------------------------------------ #
     def observation(self, obs):
         inner = obs["policy"]
         parts = [_as_numpy(inner[k]).reshape(-1) for k in self.keys]
         return np.concatenate(parts, axis=0).astype(np.float32)
+
 
 # --------------------------------------------------------------------- #
 #  Side-specific convenience wrappers                                   #

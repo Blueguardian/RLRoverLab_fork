@@ -42,10 +42,6 @@ class SkrlExpertPolicy(BasePolicy):
         self.key_slices = key_slices     # keep mapping
         self.key_shapes = key_shapes
 
-        print("[expert] using slices:")
-        for k in TEACHER_KEYS:
-            print(f"  {k:35s} {self.key_slices[k]}, shape: {self.key_shapes[k]}")
-
         # ------------------------------------------------------------------ #
         #  Build the original SKRL network (133-D proprio + 10201 heightmap) #
         # ------------------------------------------------------------------ #
@@ -92,7 +88,7 @@ class SkrlExpertPolicy(BasePolicy):
         SB3 will call .predict(obs) where obs is a (batch,flat_dim) np.ndarray.
         We just run it through our SKRL net and return (batch,act_dim).
         """
-        # make sure it's a batched 2-D array
+        print(f"[DEBUG] obs: {obs.shape}")
         if obs.ndim == 1:
             obs = obs[None, :]
         batch = torch.as_tensor(obs, dtype=torch.float32, device=self.device)

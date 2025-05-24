@@ -49,7 +49,6 @@ observations:
   camera_depth:
     student: { enabled: true, noise: "redwood" }
     teacher: { enabled: false }
-
 # ─────────────────────────────────────────────
 # ▶ Rewards (flat — applies to current agent only)
 # ─────────────────────────────────────────────

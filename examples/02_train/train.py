@@ -34,8 +34,11 @@ parser.add_argument("--expert", type=str, default=None,
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 
-if args_cli.dagger and args_cli.expert is None:
-    parser.error("--expert <checkpoint> must be provided when using --dagger")
+if args_cli.dagger:
+    if args_cli.expert is None:
+        parser.error("--expert <checkpoint> must be provided when using --dagger")
+    if args_cli.num_envs > 1:
+        parser.error("--num_envs cannot be larger than one for this DAgger implementation")
 
 # always enable cameras to record video
 if args_cli.video:
@@ -43,9 +46,6 @@ if args_cli.video:
 
 # clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
-
-# app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
-
 app_launcher = AppLauncher(args_cli)
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper  # noqa: E402
@@ -76,7 +76,7 @@ def log_setup(experiment_cfg, env_cfg, agent):
     # specify directory for logging experiments
     log_root_path = None
     if args_cli.dagger:
-        log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
+        log_root_path = os.path.join("logs", "dagger", experiment_cfg["agent"]["experiment"]["directory"])
     else:
         log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
     log_root_path = os.path.abspath(log_root_path)
@@ -186,7 +186,7 @@ def train():
             key_shapes=vec_expert.key_shapes,
         )
 
-        dagger, student_alg, run = build_dagger(
+        dagger = build_dagger(
             vec_student=vec_student,
             vec_expert=vec_expert,
             expert_policy=expert_policy,
@@ -195,8 +195,7 @@ def train():
 
         print("[DAgger] collecting + training …")
         dagger.train(total_timesteps=100_000)
-        student_alg.save(os.path.join(log_dir, "student_final"))
-        # Clean up simulation and exit
+        dagger.policy.save(os.path.join(log_dir, "policy"))# Clean up simulation and exit
         vec_student.close()
         vec_expert.close()
         simulation_app.close()

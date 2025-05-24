@@ -7,32 +7,31 @@ controller_config: skidsteer,
 controller:
   {
     asset_name: robot,
-    scale: [3.0, 3.0],
+    scale: [0.5, 3.0],
     offset: 0.0,
     track_width: 0.359,
     wheel_radius: 0.065,
     drive_joint_names: [".*Drive_Joint"],
 #    bogie_joint_names: [".*Bogie_Joint"],
-    drive_order: ["FL", "RL", "FR", "RR"],
-    drive_id_override: [2, 3, 4, 5]
+    drive_order: ["FL", "FR", "RL", "RR"],
   }
 joints:
   {
     base_drive:
     {
       joint_names_expr: [".*Drive_Joint"],
-      velocity_limit: 6,
+      velocity_limit: 10,
       effort_limit: 20,
-      stiffness: 1.0,
-      damping: 15.0
+      stiffness: 2.0,
+      damping: 400.0
     },
 #    passive_joints:
 #    {
 #      joint_names_expr: [".*Bogie_Joint"],
 #      velocity_limit: 0,
-#      effort_limit: 0,
-#      stiffness: 5.0,
-#      damping: 1.0,
+#      effort_limit: 100,
+#      stiffness: 1.0,
+#      damping: 5.0,
 #    }
   }
 collision_properties:

@@ -77,8 +77,6 @@ class SkidSteerAction(ActionTerm):
 
     def process_actions(self, actions):
         """Process raw actions into velocities for the wheels."""
-
-        # actions[:] =
         self._raw_actions[:] = actions
 
         self._processed_actions = self.raw_actions * self._scale + self._offset
@@ -86,29 +84,19 @@ class SkidSteerAction(ActionTerm):
     def apply_actions(self):
         """Apply computed wheel velocities to the robot."""
         self._joint_vel = skid_steer_simple(
-            self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device
-        )
+            self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg)
         # Publish wheel velocities
         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
 
 
 
-def skid_steer_simple(vx, omega, cfg, device):
+def skid_steer_simple(vx, omega, cfg):
     """Compute skid-steering wheel velocities."""
-    #
-    vx[:][:] = 0
-    omega[:][:] = -1
-
-    # Instance configuration variables
-    track_width = cfg.track_width  # Track width (m)
-    wheel_r = cfg.wheel_radius  # Wheel radius (m)
-
-    lin_vel = torch.abs(vx)
+    track_width = cfg.track_width
+    wheel_r = cfg.wheel_radius
 
     vel_left = (vx - omega * track_width / 2) / wheel_r
     vel_right = (vx + omega * track_width / 2) / wheel_r
 
-    wheel_vel = torch.stack([vel_left, vel_right, vel_left, vel_right], dim=1)  # Order: FL, RL, FL, RR -> Leo rover
-    # wheel_vel = torch.stack([vel_left, vel_left, vel_right, vel_right], dim=1) # Order FL, FR, RL, RR -> Summit
-
+    wheel_vel = torch.stack([vel_left, vel_right, vel_left, vel_right], dim=1)
     return wheel_vel

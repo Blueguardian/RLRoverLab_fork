@@ -29,7 +29,7 @@ def build_dagger(
     """
 
     # ------------------------------------------------------------------ #
-    # 1️⃣  Student algorithm (PPO)                                        #
+    # Student algorithm (PPO)                                        #
     # ------------------------------------------------------------------ #
     student_alg = PPO(
         policy            = "MultiInputPolicy",
@@ -51,7 +51,7 @@ def build_dagger(
     )
 
     # ------------------------------------------------------------------ #
-    # 2️⃣  Behaviour-Cloning helper used inside DAgger                    #
+    # Behaviour-Cloning helper used inside DAgger                    #
     # ------------------------------------------------------------------ #
     bc_trainer = BC(
         observation_space = vec_student.observation_space,
@@ -62,15 +62,15 @@ def build_dagger(
     )
 
     # ------------------------------------------------------------------ #
-    # 3️⃣  Simple DAgger trainer                                          #
+    # Simple DAgger trainer                                          #
     # ------------------------------------------------------------------ #
     dagger = SimpleDAggerTrainer(
-        venv          = vec_expert,          # uses np-obs
+        venv          = vec_expert,
         expert_policy = expert_policy,
         bc_trainer    = bc_trainer,
         scratch_dir   = logdir,
         rng           = np.random.default_rng(0),
-        beta_schedule = lambda _: 1.0,       # classic DAgger (always imitate)
+        beta_schedule = lambda _: 1.0,       # Always query expert
     )
 
     # one-liner helper for your train.py
@@ -81,4 +81,4 @@ def build_dagger(
         student_alg.save(path)
         print(f"[DAgger] student saved → {path}")
 
-    return dagger, student_alg, run
+    return dagger
