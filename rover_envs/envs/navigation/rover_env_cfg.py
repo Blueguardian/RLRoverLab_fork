@@ -40,7 +40,7 @@ from rover_envs.envs.navigation.mdp.curriculums import gradual_change_reward_wei
 
 
 @configclass
-class RoverSceneCfg(DebugTerrainSceneCfg):
+class RoverSceneCfg(MarsTerrainSceneCfg):
     """
     Rover Scene Configuration
 

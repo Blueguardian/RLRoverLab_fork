@@ -88,7 +88,6 @@ class SkrlExpertPolicy(BasePolicy):
         SB3 will call .predict(obs) where obs is a (batch,flat_dim) np.ndarray.
         We just run it through our SKRL net and return (batch,act_dim).
         """
-        print(f"[DEBUG] obs: {obs.shape}")
         if obs.ndim == 1:
             obs = obs[None, :]
         batch = torch.as_tensor(obs, dtype=torch.float32, device=self.device)

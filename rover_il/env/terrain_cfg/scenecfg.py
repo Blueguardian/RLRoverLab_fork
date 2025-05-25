@@ -16,7 +16,7 @@ from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns, TiledCame
 
 
 @configclass
-class RoverSceneCfg(DebugTerrainSceneCfg):
+class RoverSceneCfg(MarsTerrainSceneCfg):
     """
     Rover Scene Configuration
 

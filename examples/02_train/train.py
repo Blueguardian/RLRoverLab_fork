@@ -194,7 +194,7 @@ def train():
         )
 
         print("[DAgger] collecting + training …")
-        dagger.train(total_timesteps=100_000)
+        dagger.train(total_timesteps=10_000, rollout_round_min_episodes=2, rollout_round_min_timesteps=500, bc_train_kwargs={"n_epochs": 2, "progress_bar": True})
         dagger.policy.save(os.path.join(log_dir, "policy"))# Clean up simulation and exit
         vec_student.close()
         vec_expert.close()
