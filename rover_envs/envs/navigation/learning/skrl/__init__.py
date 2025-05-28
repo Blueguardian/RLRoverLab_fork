@@ -10,7 +10,8 @@ def get_agent(
         observation_space: Box,
         action_space: Box,
         experiment_cfg,
-        conv: bool = False):
+        conv: bool = False,
+        resnet: bool = False):
     """
     Function to get the agent.
 
@@ -23,7 +24,7 @@ def get_agent(
 
     agent = agent.upper()
     if agent == "PPO":
-        return PPO_agent(experiment_cfg, observation_space, action_space, env, conv)
+        return PPO_agent(experiment_cfg, observation_space, action_space, env, conv, resnet)
     if agent == "TRPO":
         return TRPO_agent(experiment_cfg, observation_space, action_space, env)
     if agent == "RPO":

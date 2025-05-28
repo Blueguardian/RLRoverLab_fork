@@ -11,13 +11,13 @@ from rover_envs.envs.navigation.learning.skrl.configure_models import get_models
 from rover_envs.utils.config import convert_skrl_cfg
 
 
-def PPO_agent(experiment_cfg, observation_space: Box, action_space: Box, env: ManagerBasedRLEnv, conv):
+def PPO_agent(experiment_cfg, observation_space: Box, action_space: Box, env: ManagerBasedRLEnv, conv, resnet):
 
     # Define memory size
     memory_size = experiment_cfg["agent"]["rollouts"]
     memory = RandomMemory(memory_size=memory_size, num_envs=env.num_envs, device=env.device)
     # Get the models
-    models = get_models("PPO", env, observation_space, action_space, conv)
+    models = get_models("PPO", env, observation_space, action_space, conv, resnet)
 
     # Agent cfg
     agent_cfg = PPO_DEFAULT_CONFIG.copy()

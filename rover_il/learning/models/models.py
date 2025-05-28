@@ -60,7 +60,7 @@ class SB3_GaussianNeuralNetworkConv(BaseFeaturesExtractor):
         # Create the layer defined by mlp_layers
         for feature in mlp_layers:
             self.mlp.append(nn.Linear(self._in_channels, feature))
-            self.mlp.append(get_activation(get_activation(mlp_activation)))
+            self.mlp.append(get_activation(mlp_activation))
             self._in_channels += feature
 
         # Add the final output layer
@@ -96,10 +96,8 @@ class SB3_GaussianNeuralNetworkConvResNet(BaseFeaturesExtractor):
         key_slices: dict,             # from FlattenPolicyObs
         key_shapes: dict,             # from FlattenPolicyObs
         encoder_layers=(80, 60),
-        encoder_activation=("relu","leaky_relu"),
-        mlp_layers=(256,160),
-        mlp_activation="leaky_relu",
-        features_dim=128,
+        encoder_activation=("leaky_relu","leaky_relu"),
+        features_dim=2,
     ):
         super().__init__(observation_space, features_dim)
         self.slices     = key_slices
@@ -108,7 +106,7 @@ class SB3_GaussianNeuralNetworkConvResNet(BaseFeaturesExtractor):
         # build your two vision encoders:
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=list(encoder_layers),
+            encoder_features=[256, 128, 64],
             encoder_activation=encoder_activation[0],
         )
         self.encoder_depth = ConvHeightmapEncoder(
@@ -123,17 +121,6 @@ class SB3_GaussianNeuralNetworkConvResNet(BaseFeaturesExtractor):
             if k.endswith("_student") and "camera" not in k
         ]
 
-        # mlp input dim = rgb_feat + depth_feat + sum(proprio dim)
-        in_dim = self.encoder_rgb.out_features + self.encoder_depth.out_features
-        in_dim += sum(int(np.prod(self.shapes[k])) for k in self.proprio_keys)
-
-        # build MLP
-        mlp = []
-        for h in mlp_layers:
-            mlp += [nn.Linear(in_dim, h), get_activation(mlp_activation)]
-            in_dim = h
-        mlp += [nn.Linear(in_dim, features_dim)]
-        self.mlp = nn.Sequential(*mlp)
 
     def _slice(self, flat: torch.Tensor, key: str):
         sl  = self.slices[key]
@@ -156,6 +143,4 @@ class SB3_GaussianNeuralNetworkConvResNet(BaseFeaturesExtractor):
         pr_f = torch.cat(proprio, dim=1)
 
         x = torch.cat([rgb_f, dpt_f, pr_f], dim=1)              # (B, total_feat)
-        x = self.mlp(x)  # (B, features_dim)
-
         return x

@@ -39,7 +39,7 @@ class FiniteActionBox(gym.Wrapper):
 
     def step(self, action):
         action = _as_numpy(action)
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        # action = np.clip(action, self.action_space.low, self.action_space.high)
         return super().step(action)
 
 # --------------------------------------------------------------------- #

@@ -62,7 +62,7 @@ controller_config: skidsteer,               # Control type, options: ackermann, 
 controller:
   {
     asset_name: robot,
-    scale: [0.7, 1.0],                  # Default: [1.0, 1.0]
+    scale: [0.6, 0.9],                  # Default: [1.0, 1.0]
     offset: [0.01, 0.0],                     # Default: 0.0
     track_width: 0.690,                 # [meters] Distance between left & right wheels
     wheel_radius: 0.28,              # [meters] Wheel radius
@@ -110,7 +110,7 @@ joints:
       velocity_limit: 10.0,
       effort_limit: 800,
       stiffness: 5.0,
-      damping: 7000.0,
+      damping: 6500.0,
     },
   }
 

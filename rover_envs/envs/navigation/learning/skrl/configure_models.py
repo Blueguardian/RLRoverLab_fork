@@ -23,9 +23,9 @@ def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, actio
     """
 
     if agent == "PPO":
-        if conv:
+        if conv and not resnet:
             return get_model_gaussian_conv(env, observation_space, action_space)
-        elif resnet:
+        elif resnet and not conv:
             return get_model_gaussian_resnet(env, observation_space, action_space)
         elif not conv and not resnet:
             return get_model_gaussian(env, observation_space, action_space)

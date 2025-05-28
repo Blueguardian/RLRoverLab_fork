@@ -5,6 +5,7 @@ import random
 import sys
 from datetime import datetime
 import numpy as np
+import wandb
 
 import carb
 import gymnasium as gym
@@ -193,7 +194,6 @@ def train():
             logdir=log_dir,
         )
 
-        print("[DAgger] collecting + training …")
         dagger.train(total_timesteps=10_000, rollout_round_min_episodes=2, rollout_round_min_timesteps=500, bc_train_kwargs={"n_epochs": 2, "progress_bar": True})
         dagger.policy.save(os.path.join(log_dir, "policy"))# Clean up simulation and exit
         vec_student.close()
@@ -228,14 +228,9 @@ def train():
     #     "heading": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["heading"]),
     #     "distance": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["distance"]),
     #     "relative_goal_orientation": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["relative_goal_orientation"]),
-    #     # "raycaster_cam": gym.spaces.Box(low=0, high=10, shape=term_shape_map["raycaster_cam"], dtype=np.float32),
-    #     # "linear_obs": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["linear_obs"]),
     #     "actions_taken": gym.spaces.Box(low=-1.0, high=1.0, shape=term_shape_map["actions"]),
     # })
 
-
-
-    # exit()
     trainer_cfg = experiment_cfg["trainer"]
 
     agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)

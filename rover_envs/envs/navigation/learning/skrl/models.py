@@ -113,7 +113,6 @@ class ResnetEncoder(nn.Module):
             in_features = feature
 
         self.out_features = encoder_features[-1]
-
     def forward(self, x):
         x_transformed = torch.stack([self.transform(x[i]) for i in range(x.shape[0])], dim=0)
         x = self.resnet(x_transformed)
@@ -528,7 +527,7 @@ class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
         in_channels = self.mlp_input_size
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=encoder_layers,
+            encoder_features=[256, 128, 64],
             encoder_activation="relu"
         )
 
@@ -604,7 +603,7 @@ class DeterministicNeuralNetworkConvResnet(DeterministicMixin, BaseModel):
         in_channels = self.mlp_input_size
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=encoder_layers,
+            encoder_features=[256, 128, 64],
             encoder_activation="relu"
         )
         in_channels += self.encoder_rgb.out_features

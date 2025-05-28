@@ -10,33 +10,37 @@ from .wrappers import (
 )
 
 def make_shared_vecenv(task_name, cfg, video=False):
+    # ------------------------------------------------------------------ #
+    #  Base simulator (shared)                                           #
+    # ------------------------------------------------------------------ #
     base = gym.make(task_name, cfg=cfg, viewport=video)
-    # 1) enforce finite box
     base = FiniteActionBox(base)
-    # 2) convert numpy→torch *before* any policy wrappers
     base = NumpyToTorchAction(base, device="cuda:0")
 
-    # --- expert view: flatten → split → numpyify obs -----------------------
-    def _expert():
+    # ------------------------------------------------------------------ #
+    #  Expert view: numpy observations                                    #
+    # ------------------------------------------------------------------ #
+    def _build_expert():
         env = FlattenPolicyObs(base, TEACHER_KEYS + STUDENT_KEYS)
         env = TorchTensorToNumpy(env)
-        env = NumpyToTorchAction(env)
         return env
-    vec_expert = DummyVecEnv([_expert])
 
-    # --- student view: flatten only, keep tensors --------------------------
-    def _student():
+    # ------------------------------------------------------------------ #
+    #  Student view: torch observations                                   #
+    # ------------------------------------------------------------------ #
+    def _build_student():
         env = FlattenPolicyObs(base, TEACHER_KEYS + STUDENT_KEYS)
         env = StudentIdentity(env)
-        env = NumpyToTorchAction(env)
         return env
-    vec_student = DummyVecEnv([_student])
 
-    # expose slices/shapes for feature-extractor
-    vec_student.key_slices = _student().key_slices
-    vec_student.key_shapes = _student().key_shapes
+    vec_expert  = DummyVecEnv([_build_expert])
+    vec_student = DummyVecEnv([_build_student])
 
-    vec_expert.key_slices = _expert().key_slices
-    vec_expert.key_shapes = _expert().key_shapes
+    # expose authoritative mapping
+    mapping_env           = vec_expert.envs[0]
+    vec_expert.key_slices = mapping_env.key_slices
+    vec_expert.key_shapes = mapping_env.key_shapes
+    vec_student.key_slices = mapping_env.key_slices
+    vec_student.key_shapes = mapping_env.key_shapes
 
     return vec_student, vec_expert
