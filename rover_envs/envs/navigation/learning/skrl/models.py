@@ -73,7 +73,7 @@ class ConvHeightmapEncoder(nn.Module):
             flatten_size = [w, h]
 
         self.conv_out_features = out_channels * flatten_size[0] * flatten_size[1]
-        features = [512, 128]
+        features = [80, 60]
 
         self.mlps = nn.ModuleList()
         in_channels = self.conv_out_features
@@ -527,8 +527,8 @@ class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
         in_channels = self.mlp_input_size
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=[256, 128, 64],
-            encoder_activation="relu"
+            encoder_features=[80, 60],
+            encoder_activation="leaky_relu"
         )
 
         in_channels += self.encoder_rgb.out_features
@@ -603,8 +603,8 @@ class DeterministicNeuralNetworkConvResnet(DeterministicMixin, BaseModel):
         in_channels = self.mlp_input_size
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=[256, 128, 64],
-            encoder_activation="relu"
+            encoder_features=[80, 60],
+            encoder_activation="leaky_relu"
         )
         in_channels += self.encoder_rgb.out_features
 

@@ -92,33 +92,33 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     )
     # contact_sensor = None
 
-    # height_scanner = RayCasterCfg(
-    #     # prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
-    #     prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
-    #     offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
-    #     attach_yaw_only=True,
-    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
-    #     debug_vis=False,
-    #     mesh_prim_paths=["/World/terrain/hidden_terrain"],
-    #     max_distance=100.0,
-    # )
-
-    tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
-        prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
-        depth_clipping_behavior='max',
-        data_types=["rgb", "depth"],
-        width=100, height=100,
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.00, focus_distance=400.0,
-            horizontal_aperture=40.955, clipping_range=(0.1, 10.0)
-        ),
-        offset=TiledCameraCfg.OffsetCfg(
-            pos=(0.55, 0.0, 0.6),
-            rot=(0.5, 0.5, -0.5, -0.5),
-            convention="parent"
-        )
+    height_scanner = RayCasterCfg(
+        # prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+        prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/terrain/hidden_terrain"],
+        max_distance=100.0,
     )
+
+    # tiled_camera: TiledCameraCfg = TiledCameraCfg(
+    #     # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
+    #     prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
+    #     depth_clipping_behavior='max',
+    #     data_types=["rgb", "depth"],
+    #     width=100, height=100,
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #         focal_length=24.00, focus_distance=400.0,
+    #         horizontal_aperture=40.955, clipping_range=(0.1, 10.0)
+    #     ),
+    #     offset=TiledCameraCfg.OffsetCfg(
+    #         pos=(0.55, 0.0, 0.6),
+    #         rot=(0.5, 0.5, -0.5, -0.5),
+    #         convention="parent"
+    #     )
+    # )
 
 @configclass
 class ActionsCfg:
@@ -149,26 +149,26 @@ class ObservationCfg:
             params={"command_name": "target_pose"},
             scale=1 / math.pi
         )
-        # height_scan = ObsTerm(
-        #     func=mdp.height_scan_rover,
-        #     scale=1,
-        #     params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
-        # )
+        height_scan = ObsTerm(
+            func=mdp.height_scan_rover,
+            scale=1,
+            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        )
 
-        camera_rgb = ObsTerm(
-            func=mdp.image,
-            params={
-                "sensor_cfg": SceneEntityCfg("tiled_camera"),
-                "data_type": "rgb",},
-            noise=NOISE_MODELS["gaussian"]()
-        )
-        camera_depth = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
-                    "data_type": "depth",
-                    },
-            noise=NOISE_MODELS["redwood"]()
-        )
+        # camera_rgb = ObsTerm(
+        #     func=mdp.image,
+        #     params={
+        #         "sensor_cfg": SceneEntityCfg("tiled_camera"),
+        #         "data_type": "rgb",},
+        #     noise=NOISE_MODELS["gaussian"]()
+        # )
+        # camera_depth = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
+        #             "data_type": "depth",
+        #             },
+        #     noise=NOISE_MODELS["redwood"]()
+        # )
 
         # raycaster_cam = ObsTerm(
         #     func=mdp.image,
@@ -177,8 +177,8 @@ class ObservationCfg:
         # )
 
         def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = False
+            self.enable_corruption = False
+            self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
 
@@ -337,9 +337,9 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.tiled_camera is not None:
-            self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
-        # if self.scene.height_scanner is not None:
-        #     self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        # if self.scene.tiled_camera is not None:
+        #     self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
+        if self.scene.height_scanner is not None:
+            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation
