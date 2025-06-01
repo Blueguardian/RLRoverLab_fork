@@ -212,28 +212,28 @@ def train():
 
 
     # Get the observation and action spaces
-    num_obs = env.unwrapped.observation_manager.group_obs_dim["policy"][0]
+    # num_obs = env.unwrapped.observation_manager.group_obs_dim["policy"][0]
     num_actions = env.unwrapped.action_manager.action_term_dim[0]
-    observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
+    # observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
     action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(num_actions,))
 
-    # policy_names = env.unwrapped.observation_manager._group_obs_term_names["policy"]
-    # policy_dims = env.unwrapped.observation_manager._group_obs_term_dim["policy"]
-    #
-    # term_shape_map = dict(zip(policy_names, policy_dims))
+    policy_names = env.unwrapped.observation_manager._group_obs_term_names["policy"]
+    policy_dims = env.unwrapped.observation_manager._group_obs_term_dim["policy"]
 
-    # observation_space = gym.spaces.Dict({
-    #     "camera_rgb": gym.spaces.Box(low=0, high=255, shape=term_shape_map["camera_rgb"], dtype=np.uint8),
-    #     "camera_depth": gym.spaces.Box(low=0, high=10, shape=term_shape_map["camera_depth"], dtype=np.float32),
-    #     "heading": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["heading"]),
-    #     "distance": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["distance"]),
-    #     "relative_goal_orientation": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["relative_goal_orientation"]),
-    #     "actions_taken": gym.spaces.Box(low=-1.0, high=1.0, shape=term_shape_map["actions"]),
-    # })
+    term_shape_map = dict(zip(policy_names, policy_dims))
+
+    observation_space = gym.spaces.Dict({
+        "camera_rgb": gym.spaces.Box(low=0, high=255, shape=term_shape_map["camera_rgb"], dtype=np.uint8),
+        "camera_depth": gym.spaces.Box(low=0, high=10, shape=term_shape_map["camera_depth"], dtype=np.float32),
+        "heading": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["heading"]),
+        "distance": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["distance"]),
+        "relative_goal_orientation": gym.spaces.Box(low=-math.inf, high=math.inf, shape=term_shape_map["relative_goal_orientation"]),
+        "actions_taken": gym.spaces.Box(low=-1.0, high=1.0, shape=term_shape_map["actions"]),
+    })
 
     trainer_cfg = experiment_cfg["trainer"]
 
-    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)
+    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, resnet=True)
     trainer = SequentialTrainer(cfg=trainer_cfg, agents=agent, env=env)
     trainer.train()
 

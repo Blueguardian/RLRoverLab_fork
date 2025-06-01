@@ -105,6 +105,9 @@ class ResnetEncoder(nn.Module):
         self.transform = weights.transforms(antialias=True)
         self.flatten = nn.Flatten()
 
+        for param in self.resnet.parameters():
+            param.requires_grad = False
+
         self.output_encoder = nn.ModuleList()
         in_features = 1000
         for feature in encoder_features:
@@ -115,7 +118,8 @@ class ResnetEncoder(nn.Module):
         self.out_features = encoder_features[-1]
     def forward(self, x):
         x_transformed = torch.stack([self.transform(x[i]) for i in range(x.shape[0])], dim=0)
-        x = self.resnet(x_transformed)
+        with torch.no_grad():
+            x = self.resnet(x_transformed)
         x = self.flatten(x)
 
         for layer in self.output_encoder:
@@ -527,14 +531,14 @@ class GaussianNeuralNetworkConvResnet(GaussianMixin, BaseModel):
         in_channels = self.mlp_input_size
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=[80, 60],
+            encoder_features=encoder_layers,
             encoder_activation="leaky_relu"
         )
 
         in_channels += self.encoder_rgb.out_features
         self.encoder_depth = ConvHeightmapEncoder(
             in_channels=self.obs_sizes["camera_depth"],
-            encoder_features=encoder_layers,
+            encoder_features=[8, 16, 32, 64],
             encoder_activation=encoder_activation
         )
         in_channels += self.encoder_depth.out_features
@@ -603,14 +607,14 @@ class DeterministicNeuralNetworkConvResnet(DeterministicMixin, BaseModel):
         in_channels = self.mlp_input_size
         self.encoder_rgb = ResnetEncoder(
             in_channels=3,
-            encoder_features=[80, 60],
+            encoder_features=encoder_layers,
             encoder_activation="leaky_relu"
         )
-        in_channels += self.encoder_rgb.out_features
 
+        in_channels += self.encoder_rgb.out_features
         self.encoder_depth = ConvHeightmapEncoder(
             in_channels=self.obs_sizes["camera_depth"],
-            encoder_features=encoder_layers,
+            encoder_features=[8, 16, 32, 64],
             encoder_activation=encoder_activation
         )
         in_channels += self.encoder_depth.out_features
