@@ -1,0 +1,56 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import torch
+from isaaclab.assets import RigidObject
+from isaaclab.envs import ManagerBasedEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils import configclass
+from isaaclab.managers import EventTermCfg as EventTerm
+from rover_envs.envs.navigation.utils.terrains.terrain_importer import RoverTerrainImporter
+
+if TYPE_CHECKING:
+    from isaaclab.envs import ManagerBasedRLEnv
+
+def reset_root_state_rover(
+    env: ManagerBasedEnv, env_ids: torch.Tensor, asset_cfg: SceneEntityCfg, z_offset: float = 0.5
+):
+    """
+    Generate random root states for the rovers, based on terrain_based_spawn_locations.
+    """
+    # Get the rover asset
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    # Get the terrain and sample new spawn locations
+    terrain: RoverTerrainImporter = env.scene.terrain
+    spawn_locations = terrain.get_spawn_locations()
+    spawn_index = torch.randperm(len(spawn_locations), device=env.device)[: len(env_ids)]
+    spawn_locations = spawn_locations[spawn_index]
+
+    # Add a small z offset to the spawn locations to avoid spawning the rover inside the terrain.
+    positions = spawn_locations
+    positions[:, 2] += z_offset
+
+    # Random angle
+    angle = torch.rand(len(env_ids), device=env.device) * 2 * torch.pi
+    quat = torch.zeros(len(env_ids), 4, device=env.device)
+    quat[:, 0] = torch.cos(angle / 2)
+    quat[:, 3] = torch.sin(angle / 2)
+    orientations = quat
+
+    # Update the environment origins, so that the terrain targets are sampled around the new origin.
+    env.scene.terrain.env_origins[env_ids] = positions
+    # Set the root state
+    asset.write_root_link_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
+
+@configclass
+class EventCfg:
+    """Randomization configuration for the task."""
+    reset_state = EventTerm(
+        func=reset_root_state_rover,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg(name="robot"),
+        },
+    )

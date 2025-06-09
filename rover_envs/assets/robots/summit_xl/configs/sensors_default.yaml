@@ -1,0 +1,48 @@
+--- # Need documentation
+
+
+contact_sensors:
+  {
+    use: True,
+    params:
+      {
+        # to_prims: [".*Body", ".*Drive_Joint"]
+        prim_path: "/Robot/.*_(Drive|Steer|Boogie|Body|Rocker)",
+        filter_prim_paths_expr:["/World/terrain/obstacles/obstacles"]
+      }
+
+  },
+raycaster:
+  {
+    use: True,
+    params:
+      {
+          prim_path: "/Robot/Main_Body",
+          offset: [0.0, 0.0, 10.0],
+          attach_yaw_only: True,
+          pattern_res: 0.05,
+          pattern_size: [5.0, 5.0],
+          debug_vis: False,
+          mesh_prim_paths: ["/World/terrain/hidden_terrain"],
+          max_distance: 100.0
+      }
+  },
+camera:
+  {
+    use: True,
+    params:
+      {
+          prim_path: "/Robot/Body",
+          update_period: 0.1,
+          offset_pose: [0.0, 0.0, 0.0],
+          offset_rot: [0.0, 0.0, 0.0],
+          data_types: ["rgb", "depth"],
+          focal_length: 1.0,
+          focus_distance: 100.0,
+          haperture: 20,
+          clipping_range: [0.1, 20.0],
+          image_width: 640.0,
+          image_height: 480.0
+      }
+  }
+

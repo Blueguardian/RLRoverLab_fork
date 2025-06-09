@@ -108,8 +108,10 @@ def heading_soft_contraint(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) ->
     This function applies a penalty when the rover's action indicates reverse movement.
     The penalty is normalized by the maximum episode length.
     """
-    return torch.where(env.action_manager.action[:, 0] < 0.0, (1.0 / env.max_episode_length), 0.0)
-
+    # return torch.where(env.action_manager.action[:, 0] < 0.0, (1.0 / env.max_episode_length), 0.0)
+    reverse_speed = torch.clamp(-env.action_manager.action[:, 0], min=0.0)  # Only penalize negatives
+    penalty = (reverse_speed * 0.4) / env.max_episode_length  # 0.2 is a tunable scale factor
+    return penalty
 
 def collision_penalty(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float) -> torch.Tensor:
     """
@@ -158,3 +160,24 @@ def angle_to_goal_reward(env: ManagerBasedRLEnv, command_name: str) -> torch.Ten
 
     # Return the cosine of the angle, normalized by the maximum episode length.
     return angle_reward / env.max_episode_length
+
+
+def forward_progress_reward(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
+    action = env.action_manager.action[:, 0]  # linear velocity
+    to_target = env.command_manager.get_command(command_name)[:, :2]
+
+    angle = torch.atan2(to_target[:, 1], to_target[:, 0])
+    alignment = torch.cos(angle)  # [-1, 1]
+
+    forward_motion = torch.clamp(action, min=0.0)
+
+    # Early-exploration shaping: strong incentive early, decays over episode
+    early_bias = (1.0 - env.episode_length_buf / env.max_episode_length).clamp(min=0.1)
+
+    # Positive: aligned forward motion
+    positive_progress = forward_motion * torch.clamp(alignment, min=0.0)
+
+    # Negative: forward motion in wrong direction (backward relative to goal)
+    backward_penalty = forward_motion * torch.clamp(-alignment, min=0.0) * early_bias
+
+    return (positive_progress - backward_penalty) / env.max_episode_length

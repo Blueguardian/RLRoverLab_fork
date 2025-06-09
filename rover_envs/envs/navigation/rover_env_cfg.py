@@ -16,12 +16,14 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg  # noqa: F401
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
-from isaaclab.sim import PhysxCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns, TiledCameraCfg, TiledCamera, Camera, CameraCfg, RayCasterCamera, RayCasterCameraCfg
+from isaaclab.sensors.ray_caster.patterns import PinholeCameraPatternCfg
+from isaaclab.sim import PhysxCfg, RenderCfg
 from isaaclab.sim import SimulationCfg as SimCfg
 from isaaclab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise  # noqa: F401
+import torch
 
 ##
 # Scene Description
@@ -34,7 +36,15 @@ from rover_envs.envs.navigation.utils.terrains.commands_cfg import TerrainBasedP
 # from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommandCustom  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import RoverTerrainImporter  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommand  # noqa: F401
+from rover_envs.envs.navigation.mdp.curriculums import gradual_change_reward_weight
+from rover_il.env.noise_cfgs.gaussian import GaussianImageNoiseCfg
+from rover_il.env.noise_cfgs.redwood import RedwoodDepthNoiseCfg
 
+
+NOISE_MODELS = {
+            "gaussian": lambda: GaussianImageNoiseCfg(),
+            "redwood": lambda: RedwoodDepthNoiseCfg(),
+        }
 
 @configclass
 class RoverSceneCfg(MarsTerrainSceneCfg):
@@ -77,21 +87,39 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     #     prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
+        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body|Rocker|Drive_Link)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )
     # contact_sensor = None
 
-    height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Body",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/terrain/hidden_terrain"],
-        max_distance=100.0,
-    )
+    # height_scanner = RayCasterCfg(
+    #     # prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+    #     prim_path="{ENV_REGEX_NS}/Robot/Main_Body",
+    #     offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
+    #     debug_vis=False,
+    #     mesh_prim_paths=["/World/terrain/hidden_terrain"],
+    #     max_distance=100.0,
+    # )
 
+    tiled_camera: TiledCameraCfg = TiledCameraCfg(
+        # prim_path="{ENV_REGEX_NS}/.*/Main_Body/Base_link/summit_xl_front_laser_base_link/summit_xl_front_laser_link/Camera1",
+        prim_path="{ENV_REGEX_NS}/.*/Main_Body/Camera1",
+        depth_clipping_behavior='max',
+        data_types=["rgb", "depth"],
+        width=100, height=100,
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.00, focus_distance=400.0,
+            horizontal_aperture=40.955, clipping_range=(0.1, 10.0)
+        ),
+        offset=TiledCameraCfg.OffsetCfg(
+            # pos=(0.0, 0.0, 0.05),
+            pos=(0.55, 0.0, 0.6),
+            rot=(0.5, 0.5, -0.5, -0.5),
+            convention="parent"
+        )
+    )
 
 @configclass
 class ActionsCfg:
@@ -117,20 +145,41 @@ class ObservationCfg:
             },
             scale=1 / math.pi,
         )
-        angle_diff = ObsTerm(
-            func=mdp.angle_diff,
+        relative_goal_orientation = ObsTerm(
+            func=mdp.relative_orientation,
             params={"command_name": "target_pose"},
             scale=1 / math.pi
         )
-        height_scan = ObsTerm(
-            func=mdp.height_scan_rover,
-            scale=1,
-            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        # height_scan = ObsTerm(
+        #     func=mdp.height_scan_rover,
+        #     scale=1,
+        #     params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+        # )
+
+        camera_rgb = ObsTerm(
+            func=mdp.image,
+            params={
+                "sensor_cfg": SceneEntityCfg("tiled_camera"),
+                "data_type": "rgb",},
+            # noise=NOISE_MODELS["gaussian"]()
+        )
+        camera_depth = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("tiled_camera"),
+                    "data_type": "depth",
+                    },
+            # noise=NOISE_MODELS["redwood"]()
         )
 
+        # raycaster_cam = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("raycaster_camera"),
+        #             "data_type": "RaycasterCamera"}
+        # )
+
         def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = True
+            self.enable_corruption = False
+            self.concatenate_terms = False
 
     policy: PolicyCfg = PolicyCfg()
 
@@ -173,7 +222,7 @@ class RewardsCfg:
         weight=-2.0,
         params={"command_name": "target_pose", "threshold": 11.0},
     )
-    angle_diff = RewTerm(
+    relative_goal_orientation = RewTerm(
         func=mdp.angle_to_goal_reward,
         weight=5.0,
         params={"command_name": "target_pose"},
@@ -236,10 +285,10 @@ class EventCfg:
     )
 
 
-# @configclass
-# class CurriculumCfg:
-#     """ Curriculum configuration for the task. """
-#     target_distance = CurrTerm(func=mdp.goal_distance_curriculum)
+@configclass
+class CurriculumCfg:
+    """ Curriculum configuration for the task. """
+
 
 
 @configclass
@@ -248,7 +297,7 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
 
     # Create scene
     scene: RoverSceneCfg = RoverSceneCfg(
-        num_envs=5, env_spacing=4.0, replicate_physics=False)
+        num_envs=128, env_spacing=4.0, replicate_physics=False)
 
     # Setup PhysX Settings
     sim: SimCfg = SimCfg(
@@ -256,15 +305,15 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
             enable_stabilization=True,
             gpu_max_rigid_contact_count=8388608,
             gpu_max_rigid_patch_count=262144,
-            gpu_found_lost_pairs_capacity=2**21,
-            gpu_found_lost_aggregate_pairs_capacity=2**25,  # 2**21,
-            gpu_total_aggregate_pairs_capacity=2**21,   # 2**13,
+            gpu_found_lost_pairs_capacity=2 ** 21,
+            gpu_found_lost_aggregate_pairs_capacity=2 ** 25,  # 2**21,
+            gpu_total_aggregate_pairs_capacity=2 ** 21,  # 2**13,
             gpu_max_soft_body_contacts=1048576,
             gpu_max_particle_contacts=1048576,
             gpu_heap_capacity=67108864,
             gpu_temp_buffer_capacity=16777216,
             gpu_max_num_partitions=8,
-            gpu_collision_stack_size=2**28,
+            gpu_collision_stack_size=2 ** 28,
             friction_correlation_distance=0.025,
             friction_offset_threshold=0.04,
             bounce_threshold_velocity=2.0,
@@ -280,7 +329,7 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     commands: CommandsCfg = CommandsCfg()
-    # curriculum: CurriculumCfg = CurriculumCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         self.sim.dt = 1 / 30.0
@@ -289,7 +338,9 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.height_scanner is not None:
-            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        if self.scene.tiled_camera is not None:
+            self.scene.tiled_camera.update_period = self.sim.dt * self.decimation
+        # if self.scene.height_scanner is not None:
+        #     self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation

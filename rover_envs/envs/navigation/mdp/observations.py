@@ -45,9 +45,41 @@ def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> tor
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
 
 
-def angle_diff(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
+def relative_orientation(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     """Calculate the angle difference between the rover's heading and the target."""
     # Get the angle to the target
     heading_angle_diff = env.command_manager.get_command(command_name)[:, 3]
-
     return heading_angle_diff.unsqueeze(-1)
+
+def image(env, sensor_cfg, data_type):
+    sensor = env.scene.sensors.get(sensor_cfg.name)
+    output = sensor.data.output.get(data_type)
+    if data_type == "rgb":
+        try:
+            if not isinstance(output, torch.Tensor):
+                output = torch.from_numpy(output)
+            output = output.to(torch.float32)
+            output = output.permute(0, 3, 1, 2)  # BCHW
+            return output
+        except Exception as e:
+            print(f"[ERROR RGB] Failed to process RGB output: {e}")
+            return torch.zeros((1, 3, 100, 100), dtype=torch.float32, device=env.device)
+    elif data_type == "depth":
+        try:
+            depth = sensor.data.output["depth"]
+            depth = depth.permute(0, 3, 1, 2)
+            return depth
+        except Exception as e:
+            print(f"[ERROR] Failed to handle depth output: {e}")
+            return torch.zeros((1, 1, 100, 100), dtype=torch.float32, device=env.device)
+    elif data_type == "RaycasterCamera":
+        try:
+            depth = sensor.data.output["distance_to_image_plane"]
+            depth = depth.permute(0, 3, 1, 2)
+            return depth
+        except Exception as e:
+            print(f"[ERROR] Failed to handle depth output: {e}")
+            return torch.zeros((1, 1, 100, 100), dtype=torch.float32, device=env.device)
+    else:
+        print(f"[ERROR] Unknown data_type: {data_type}")
+        return torch.zeros((1, 3, 100, 100), dtype=torch.float32, device=env.device)

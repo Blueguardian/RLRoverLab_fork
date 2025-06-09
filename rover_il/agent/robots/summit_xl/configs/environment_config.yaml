@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════════════
+# ENVIRONMENT CONFIGURATION FILE
+# Used by both teacher and student roles.
+# Sensors, terrain, and lighting setup are selectively enabled per role.
+# ═══════════════════════════════════════════════════════════════════════
+
+sensors:
+  # ───────────────
+  contact_sensors:
+    teacher:
+      enabled: true
+      to_prims: [".*Body", ".*Drive_Joint"]
+    student:
+      enabled: true
+      to_prims: [".*Body", ".*Drive_Joint"]
+
+  # ───────────────
+  raycaster:
+    teacher:
+      enabled: true
+      to_prim: "Body"
+      offset: [0.0, 0.0, 10.0]
+      resolution: 0.05
+      size: [5.0, 5.0]
+      mesh_prim_paths: ["/World/terrain/hidden_terrain"]
+      max_distance: 100.0
+      attach_yaw_only: true
+      debug_vis: false
+
+    student:
+      enabled: false  # don't provide privileged ray data
+
+  # ───────────────
+  camera:
+    teacher:
+      enabled: false
+
+    student:
+      enabled: true
+      position: [0.0, 0.3, 0.8]
+      orientation: [0.0, 0.0, 0.0]   # [roll, pitch, yaw]
+      resolution: [256, 144]
+      fov: 90
+      capture_rgb: true
+      capture_depth: true
+      capture_normals: false
+      capture_segmentation: false
+      update_period: 0.198  # optionally override default
+
+# ───────────────────────────────────────────────────────────────────────
+terrain:
+  type: "mars"
+
+  heightmap_importer:
+    enabled: false
+    path: /terrain/heightmaps
+    height_scale: 2.0
+    size: [50.0, 50.0]
+
+  obstacles:
+    no_obstacles: false
+
+# ───────────────────────────────────────────────────────────────────────
+lighting:
+  dome_light:
+    enabled: true
+    intensity: 100
+    color_temperature: 4500.0
+    texture_file: "assets/textures/background.png"
+
+  sphere_light:
+    enabled: true
+    intensity: 30000
+    radius: 50.0
+    color_temperature: 5500.0
+    position: [0.0, -180.0, 80.0]
+
+
+physx:
+  enable_stabilization: true
+  gpu_max_rigid_contact_count: 8388608
+  gpu_max_rigid_patch_count: 262144
+  gpu_found_lost_pairs_capacity: 2097152
+  gpu_found_lost_aggregate_pairs_capacity: 33554432
+  gpu_total_aggregate_pairs_capacity: 2097152
+  gpu_max_soft_body_contacts: 1048576
+  gpu_max_particle_contacts: 1048576
+  gpu_heap_capacity: 67108864
+  gpu_temp_buffer_capacity: 16777216
+  gpu_max_num_partitions: 8
+  gpu_collision_stack_size: 268435456
+  friction_correlation_distance: 0.025
+  friction_offset_threshold: 0.04
+  bounce_threshold_velocity: 2.0

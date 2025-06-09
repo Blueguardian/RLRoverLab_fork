@@ -1,0 +1,71 @@
+---
+name: leo_rover,
+robot_model_path: /leo_rover/leo_rover.usd,
+controller_config: skidsteer,
+
+
+controller:
+  {
+    asset_name: robot,
+    scale: [3.0, 3.0],
+    offset: [0.01, 0.0],
+    track_width: 0.359,
+    wheel_radius: 0.065,
+    drive_joint_names: [".*Drive_Joint"],
+#    bogie_joint_names: [".*Bogie_Joint"],
+    drive_order: ["FL", "FR", "RL", "RR"],
+  }
+joints:
+  {
+    base_drive:
+    {
+      joint_names_expr: [".*Drive_Joint"],
+      velocity_limit: 10,
+      effort_limit: 20,
+      stiffness: 5.0,
+      damping: 9000.0
+    },
+#    passive_joints:
+#    {
+#      joint_names_expr: [".*Bogie_Joint"],
+#      velocity_limit: 0,
+#      effort_limit: 100,
+#      stiffness: 1.0,
+#      damping: 5.0,
+#    }
+  }
+collision_properties:
+  {
+    contact_offset: 0.04,
+    rest_offset: 0.01
+  }
+rigidBody_properties:
+  {
+    max_linear_velocity: 3,
+    max_angular_velocity: 60.0,
+    max_depenetration_velocity: 1.0,
+    disable_gravity: false,
+  }
+simulation_properties:
+  {
+    self_collision: false,
+    solver_position_iteration_count: 32,
+    solver_velocity_iteration_count: 4,
+  }
+pose_config:
+  {
+    init_pose: [0.0, 0.0, 0.0],
+    joint_pose:
+    {
+      pose_config:
+      {
+        names: [".*Bogie_Joint"],
+        values: [0.0]
+      },
+      velocity_config:
+      {
+        names: [".*Drive_Joint", ".*Bogie_Joint"],
+        values: [0.0, 0.0]
+      }
+    }
+  }
